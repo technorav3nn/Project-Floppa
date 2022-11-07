@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  },
+  "scripts": {
+    "watch": "nodemon --exec \"node scripts/build.js\" --watch \"src/**/*\" -e lua,js"
+  }
+}
