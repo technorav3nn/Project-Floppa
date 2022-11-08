@@ -6,25 +6,30 @@ local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
 local Util = require("modules/util/Util")
 
+local Linoria = {}
+
 -- // returns Library, Window, ThemeManager and SaveManager.
-local function createLinoriaLib(gameName)
+function Linoria:createLinoriaLib(gameName)
     Library:SetWatermarkVisibility(true)
     Library:SetWatermark('project floppa - ' .. gameName)
 
     local Window = Library:CreateWindow({
         -- // Position and Size are also valid options
         -- // but you do not need to define them unless you are changing them :)
-        Title = 'project floppa - ' .. gameName .. "- build " .. Util:GetBuildId(),
+        Title = "project floppa - build " .. Util:getBuildId(),
         Center = true,
         AutoShow = true,
     })
 
-    local Settings = Window:AddTab("Settings")
 
-    return Library, Window, Settings
+    return Library, Window
 end
 
-local function initManagers(Lib, tab)
+function Linoria:initManagers(Lib, Window)
+    ThemeManager.BuiltInThemes.Default[2].AccentColor = Color3.fromRGB(255, 65, 65):ToHex()
+
+    local Settings = Window:AddTab("Settings")
+
     ThemeManager:SetLibrary(Lib)
     SaveManager:SetLibrary(Lib)
 
@@ -35,12 +40,10 @@ local function initManagers(Lib, tab)
     ThemeManager:SetFolder('project-floppa')
     SaveManager:SetFolder('project-floppa/game')
 
-    SaveManager:BuildConfigSection(tab)
+    SaveManager:BuildConfigSection(Settings)
 
-    ThemeManager:ApplyToTab(tab)
+    ThemeManager:ApplyToTab(Settings)
+
 end
 
-return {
-    createLinoriaLib,
-    initManagers
-}
+return Linoria
