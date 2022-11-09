@@ -1,7 +1,6 @@
 -- // Imports
-local Util = require("modules/util/Util")
-local Teleporter = require("modules/util/exploit/Teleporter")
-local Linoria = require("modules/ui/LinoriaLib")
+local Linoria = require("modules/exploit/ui/LinoriaLib")
+local ChamsCreator = require("modules/exploit/visuals/Chams")
 
 -- // Services
 local Players = game:GetService("Players")
@@ -18,6 +17,8 @@ local playerItems = LockerManager:GetPlayerItems()
 local ItemSignal = LockerManager.ItemSignal
 
 local localPlayer = Players.LocalPlayer
+
+local Chams = ChamsCreator.new()
 
 -- // UI
 local Tabs = {
@@ -43,6 +44,16 @@ do
 
         LockerTakeTab:AddButton("Take Item", function()
             LockerManager:GrabItem(Options.LockerTakeItemSelected.Value)
+        end)
+
+        local tog = LockerTakeTab:AddToggle('MyToggle', {
+            Text = 'This is a toggle',
+            Default = false, -- Default value (true / false)
+            Tooltip = 'This is a tooltip', -- Information shown when you hover over the toggle
+        })
+        tog:OnChanged(function()
+            print(Toggles.MyToggle.Value)
+            Chams:Toggle(Toggles.MyToggle.Value)
         end)
     end
 

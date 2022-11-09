@@ -1,7 +1,8 @@
 -- // Imports
 local Signals = require("modules/util/Signals")
-local Compatiblity = require("modules/util/exploit/Compatiblity")
+local Compatiblity = require("modules/exploit/Compatiblity")
 local TableUtil = require("modules/util/TableUtil")
+local Character = require("modules/exploit/Character")
 
 -- // LockerManager
 local LockerManager = {}
@@ -22,21 +23,13 @@ local lockerFolder = game:GetService("ReplicatedStorage").PlayerStats[localPlaye
 -- // Events
 lockerFolder.ChildAdded:Connect(function()
     task.wait(0.3)
-    local items = TableUtil:map(lockerFolder:GetChildren(), function(instance)
-        print(instance.ClassName)
-
-        return instance.ToolName.Value
-    end)
+    local items = LockerManager:GetLockerItems()
     LockerManager.ItemSignal:Fire("StoredLockerItemsUpdate", items)
 end)
 
 lockerFolder.ChildRemoved:Connect(function()
     task.wait(0.3)
-    local items = TableUtil:map(lockerFolder:GetChildren(), function(instance)
-        print(instance.ClassName)
-
-        return instance.ToolName.Value
-    end)
+    local items = LockerManager:GetLockerItems()
     LockerManager.ItemSignal:Fire("StoredLockerItemsUpdate", items)
 end)
 
@@ -98,7 +91,7 @@ function LockerManager:GetLockerItems()
 end
 
 function LockerManager:GrabItem(item)
-    local oldCFrame = localPlayer.Character.HumanoidRootPart.CFrame
+    local oldCFrame = Character:GetCFrame()
     local locker = game:GetService("Workspace"):FindFirstChild("Locker")
 
     localPlayer.Character.HumanoidRootPart.CFrame =
@@ -125,7 +118,7 @@ function LockerManager:GrabItem(item)
 end
 
 function LockerManager:StoreItem(item)
-    local oldCFrame = localPlayer.Character.HumanoidRootPart.CFrame
+    local oldCFrame = Character:GetCFrame()
     local locker = game:GetService("Workspace"):FindFirstChild("Locker")
 
     localPlayer.Character.HumanoidRootPart.CFrame =

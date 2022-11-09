@@ -48,9 +48,8 @@ end
 end)
 __bundle_register("games/LifeSentence/main", function(require, _LOADED, __bundle_register, __bundle_modules)
 -- // Imports
-local Util = require("modules/util/Util")
-local Teleporter = require("modules/util/exploit/Teleporter")
-local Linoria = require("modules/ui/LinoriaLib")
+local Linoria = require("modules/exploit/ui/LinoriaLib")
+local ChamsCreator = require("modules/exploit/visuals/Chams")
 
 -- // Services
 local Players = game:GetService("Players")
@@ -67,6 +66,8 @@ local playerItems = LockerManager:GetPlayerItems()
 local ItemSignal = LockerManager.ItemSignal
 
 local localPlayer = Players.LocalPlayer
+
+local Chams = ChamsCreator.new()
 
 -- // UI
 local Tabs = {
@@ -92,6 +93,16 @@ do
 
         LockerTakeTab:AddButton("Take Item", function()
             LockerManager:GrabItem(Options.LockerTakeItemSelected.Value)
+        end)
+
+        local tog = LockerTakeTab:AddToggle('MyToggle', {
+            Text = 'This is a toggle',
+            Default = false, -- Default value (true / false)
+            Tooltip = 'This is a tooltip', -- Information shown when you hover over the toggle
+        })
+        tog:OnChanged(function()
+            print(Toggles.MyToggle.Value)
+            Chams:Toggle(Toggles.MyToggle.Value)
         end)
     end
 
@@ -142,8 +153,9 @@ end)
 __bundle_register("games/LifeSentence/LockerManager", function(require, _LOADED, __bundle_register, __bundle_modules)
 -- // Imports
 local Signals = require("modules/util/Signals")
-local Compatiblity = require("modules/util/exploit/Compatiblity")
+local Compatiblity = require("modules/exploit/Compatiblity")
 local TableUtil = require("modules/util/TableUtil")
+local Character = require("modules/exploit/Character")
 
 -- // LockerManager
 local LockerManager = {}
@@ -164,21 +176,13 @@ local lockerFolder = game:GetService("ReplicatedStorage").PlayerStats[localPlaye
 -- // Events
 lockerFolder.ChildAdded:Connect(function()
     task.wait(0.3)
-    local items = TableUtil:map(lockerFolder:GetChildren(), function(instance)
-        print(instance.ClassName)
-
-        return instance.ToolName.Value
-    end)
+    local items = LockerManager:GetLockerItems()
     LockerManager.ItemSignal:Fire("StoredLockerItemsUpdate", items)
 end)
 
 lockerFolder.ChildRemoved:Connect(function()
     task.wait(0.3)
-    local items = TableUtil:map(lockerFolder:GetChildren(), function(instance)
-        print(instance.ClassName)
-
-        return instance.ToolName.Value
-    end)
+    local items = LockerManager:GetLockerItems()
     LockerManager.ItemSignal:Fire("StoredLockerItemsUpdate", items)
 end)
 
@@ -240,7 +244,7 @@ function LockerManager:GetLockerItems()
 end
 
 function LockerManager:GrabItem(item)
-    local oldCFrame = localPlayer.Character.HumanoidRootPart.CFrame
+    local oldCFrame = Character:GetCFrame()
     local locker = game:GetService("Workspace"):FindFirstChild("Locker")
 
     localPlayer.Character.HumanoidRootPart.CFrame =
@@ -267,7 +271,7 @@ function LockerManager:GrabItem(item)
 end
 
 function LockerManager:StoreItem(item)
-    local oldCFrame = localPlayer.Character.HumanoidRootPart.CFrame
+    local oldCFrame = Character:GetCFrame()
     local locker = game:GetService("Workspace"):FindFirstChild("Locker")
 
     localPlayer.Character.HumanoidRootPart.CFrame =
@@ -290,6 +294,19 @@ end
 
 return LockerManager
 end)
+__bundle_register("modules/exploit/Character", function(require, _LOADED, __bundle_register, __bundle_modules)
+-- // Services
+local Players = game:GetService("Players")
+
+-- // Character
+local Character = {}
+
+function Character:GetCFrame()
+    return Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+end
+
+return Character
+end)
 __bundle_register("modules/util/TableUtil", function(require, _LOADED, __bundle_register, __bundle_modules)
 local TableUtil = {}
 
@@ -304,7 +321,7 @@ end
 
 return TableUtil
 end)
-__bundle_register("modules/util/exploit/Compatiblity", function(require, _LOADED, __bundle_register, __bundle_modules)
+__bundle_register("modules/exploit/Compatiblity", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Compatiblity = {}
 
 function Compatiblity:fireproximityprompt(ProximityPrompt, amount, skip)
@@ -334,10 +351,88 @@ end)
 __bundle_register("modules/util/Signals", function(require, _LOADED, __bundle_register, __bundle_modules)
 return loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/Signal/main/Manager.lua"))()
 end)
-__bundle_register("modules/ui/LinoriaLib", function(require, _LOADED, __bundle_register, __bundle_modules)
+__bundle_register("modules/exploit/visuals/Chams", function(require, _LOADED, __bundle_register, __bundle_modules)
+-- // A class to use the Highlight feature as chams
+-- // Some parts taken from wally's script showing the
+-- // highlight feature.
+
+-- // Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+-- // Variables
+local RenderStepped = RunService.RenderStepped
+
+-- // Chams
+
+local Chams = {}
+Chams.__index = Chams
+
+function Chams.new()
+    local self = setmetatable({
+        Enabled = true,
+        UseTeamColor = true,
+        Color = Color3.fromRGB(255, 0, 0),
+        Objects = {}
+    }, Chams)
+
+    self:_init()
+
+    return self
+end
+
+function Chams:_init()
+    local chamsFolder = Instance.new("Folder", CoreGui)
+    chamsFolder.Name = "Chams"
+
+    Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function(char)
+            self:_MakeEsp(char)
+        end)
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        if self.Objects[player.Character.Name] then
+            self.Objects[player.Character.Name]:Destroy()
+            self.Objects[player.Character.Name] = nil
+        end
+    end)
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        self:_MakeEsp(player.Character)
+    end
+
+    self.RenderSteppedLoop = RenderStepped:Connect(function()
+        for _, highlight in pairs(self.Objects) do
+            highlight.Enabled = self.Enabled
+        end
+    end)
+end
+
+function Chams:_MakeEsp(char)
+    pcall(function()
+        local highlight = Instance.new("Highlight", CoreGui.Chams)
+        highlight.Name = char.Name
+        highlight.Adornee = char
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.FillColor = self.Color
+
+        self.Objects[char.Name] = highlight
+    end)
+end
+
+function Chams:Toggle(state)
+    assert(type(state) == "boolean", "state of chams must be boolean!")
+    self.Enabled = state
+end
+
+return Chams
+end)
+__bundle_register("modules/exploit/ui/LinoriaLib", function(require, _LOADED, __bundle_register, __bundle_modules)
 local repo = 'https://raw.githubusercontent.com/wally-rblx/LinoriaLib/main/'
 
-local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local Library = loadstring(game:HttpGet('https://gist.githubusercontent.com/technorav3nn/461bc96a7cf4c1acf12794f5850f21cc/raw/68cd0a13c80d3b8d3423ea475d33185cd0d10978/linoria-work-swm.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
@@ -394,32 +489,5 @@ function Util:getBuildId()
 end
 
 return Util
-end)
-__bundle_register("modules/util/exploit/Teleporter", function(require, _LOADED, __bundle_register, __bundle_modules)
-local Teleporter = {}
-
--- { [teleport name] = Cframe.new(cframe) }
-function Teleporter.new(teleports)
-    local self = setmetatable({
-        teleports = teleports
-    }, Teleporter)
-    return self
-end
-
-function Teleporter:TeleportTo(teleportName)
-    if self.teleports[teleportName] ~= nil then
-        local success, error = pcall(function()
-            game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart").CFrame = self.teleports[teleportName]
-        end)
-
-        if not success and error then
-            return consoleerror(error)
-        end
-    else
-        return consoleerror("Unknown teleport: " ..teleportName.. "!")
-    end
-end
-
-return Teleporter
 end)
 return __bundle_require("__root")
