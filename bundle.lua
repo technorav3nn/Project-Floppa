@@ -47,103 +47,124 @@ if game.PlaceId == game.PlaceId then
 end
 end)
 __bundle_register("games/LifeSentence/main", function(require, _LOADED, __bundle_register, __bundle_modules)
--- // Imports
 local Linoria = require("modules/exploit/ui/LinoriaLib")
 local ChamsCreator = require("modules/exploit/visuals/Chams")
-
--- // Services
-local Players = game:GetService("Players")
-
--- // Manager Imports
 local LockerManager = require("games/LifeSentence/LockerManager")
 
--- // Variables
-local Library, Window, settingsTab = Linoria:createLinoriaLib("life sentence")
-
-local lockerItems = LockerManager:GetLockerItems()
-local playerItems = LockerManager:GetPlayerItems()
-
-local ItemSignal = LockerManager.ItemSignal
+local Players = game:GetService("Players")
 
 local localPlayer = Players.LocalPlayer
 
-local Chams = ChamsCreator.new()
+local Library, Window, settingsTab = Linoria:createLinoriaLib("life sentence")
+local Chams = ChamsCreator.new({
+    Enabled = false,
+    UseTeamColor = false,
+    Color = Color3.new(0.035294, 0.309803, 1)
+})
+
+local lockerItems = LockerManager:GetLockerItems()
+local playerItems = LockerManager:GetPlayerItems()
+local ItemSignal = LockerManager.ItemSignal
 
 -- // UI
 local Tabs = {
+    Player = Window:AddTab("Player"),
     Items = Window:AddTab("Items"),
+    Visuals = Window:AddTab("Visuals"),
+    Misc = Window:AddTab("Miscellaneous"),
     Settings = settingsTab
 }
 
-local Components = {
-    LockerTakeDropdown = nil
-}
-
-local LockerTabBox = Tabs.Items:AddLeftTabbox()
+-- // Player Tab
 do
-    local LockerTakeTab = LockerTabBox:AddTab("Locker Take")
+end
+
+-- // Items Tab
+do
+    local LockerTabBox = Tabs.Items:AddLeftTabbox()
     do
-        Components.LockerTakeDropdown = LockerTakeTab:AddDropdown('LockerTakeItemSelected', {
-            Values = lockerItems,
-            Default = lockerItems[1],
-            Multi = false,
-            Text = 'Item',
-            Tooltip = 'The Item to take from your Locker',
-        })
+        local LockerTakeSubTab = LockerTabBox:AddTab("Locker Take")
+        do
+            LockerTakeSubTab:AddDropdown('LockerTakeItemSelected', {
+                Values = lockerItems,
+                Default = lockerItems[1],
+                Multi = false,
+                Text = 'Item',
+                Tooltip = 'The Item to take from your Locker',
+            })
 
-        LockerTakeTab:AddButton("Take Item", function()
-            LockerManager:GrabItem(Options.LockerTakeItemSelected.Value)
-        end)
+            LockerTakeSubTab:AddButton("Take Item", function()
+                LockerManager:GrabItem(Options.LockerTakeItemSelected.Value)
+            end)
+        end
 
-        local tog = LockerTakeTab:AddToggle('MyToggle', {
-            Text = 'This is a toggle',
-            Default = false, -- Default value (true / false)
-            Tooltip = 'This is a tooltip', -- Information shown when you hover over the toggle
-        })
-        tog:OnChanged(function()
-            print(Toggles.MyToggle.Value)
-            Chams:Toggle(Toggles.MyToggle.Value)
-        end)
+        local LockerStoreTab = LockerTabBox:AddTab("Locker Store")
+        do
+            LockerStoreTab:AddDropdown('LockerStoreItemSelected', {
+                Values = playerItems,
+                Default = playerItems[1],
+                Multi = false,
+                Text = 'Item',
+                Tooltip = 'The Item to store to your Locker',
+            })
+            LockerStoreTab:AddButton("Store Item", function()
+                local selected = Options.LockerStoreItemSelected.Value
+                local item = localPlayer.Character:FindFirstChild(selected) or localPlayer.Backpack:FindFirstChild(selected)
+
+                LockerManager:StoreItem(item)
+            end)
+        end
+    end
+end
+
+-- // Visuals Tab
+do
+    local ESPGroupBox = Tabs.Visuals:AddLeftGroupbox("ESP")
+    do
+        ESPGroupBox:AddToggle('ESPEnabled', { Text = "Enabled" })
     end
 
-    local LockerStoreTab = LockerTabBox:AddTab("Locker Store")
+    local ChamsGroupBox = Tabs.Visuals:AddRightGroupbox("Chams")
     do
-        Components.LockerStoreDropdown = LockerStoreTab:AddDropdown('LockerStoreItemSelected', {
-            Values = playerItems,
-            Default = playerItems[1],
-            Multi = false,
-            Text = 'Item',
-            Tooltip = 'The Item to store to your Locker',
+        ChamsGroupBox:AddToggle('ChamsEnabled', { Text = "Enabled" })
+        :OnChanged(function()
+            Chams:Toggle(Toggles.ChamsEnabled.Value)
+        end)
+        ChamsGroupBox:AddSlider('ChamsFillTransparency', {
+            Text = "Fill Transparency",
+            Rounding = 1,
+            Default = 1,
+            Min = 0,
+            Max = 1,
         })
-        LockerStoreTab:AddButton("Store Item", function()
-            local selected = Options.LockerStoreItemSelected.Value
-            local item = localPlayer.Character:FindFirstChild(selected) or localPlayer.Backpack:FindFirstChild(selected)
-            
-            LockerManager:StoreItem(item)
+        :OnChanged(function()
+            Chams.FillTransparency = Options.ChamsFillTransparency.Value
         end)
     end
 end
 
+
 ItemSignal:Connect("StoredLockerItemsUpdate", function(items)
-    Components.LockerTakeDropdown.Values = items
-    Components.LockerTakeDropdown:SetValues()
-    Components.LockerTakeDropdown:SetValue()
+    Options.LockerTakeItemSelected.Values = items
+    Options.LockerTakeItemSelected:SetValues()
+    Options.LockerTakeItemSelected:SetValue()
 
     table.foreach(items, print)
 end)
 
 ItemSignal:Connect("CharacterItemsUpdate", function(items)
-    Components.LockerStoreDropdown.Values = items
-    Components.LockerStoreDropdown:SetValues()
-    Components.LockerStoreDropdown:SetValue()
+    Options.LockerStoreItemSelected.Values = items
+    Options.LockerStoreItemSelected:SetValues()
+    Options.LockerStoreItemSelected:SetValue()
 end)
 
 Linoria:initManagers(Library, Window)
 
+-- // Used to remove the anti-cheat script
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
-            game:GetService("Players").LocalPlayer.Backpack.Local.Dead:Destroy()
+            localPlayer.Backpack.Local.Dead:Destroy()
         end)
     end
 end)
@@ -352,10 +373,11 @@ __bundle_register("modules/util/Signals", function(require, _LOADED, __bundle_re
 return loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/Signal/main/Manager.lua"))()
 end)
 __bundle_register("modules/exploit/visuals/Chams", function(require, _LOADED, __bundle_register, __bundle_modules)
--- // A class to use the Highlight feature as chams
--- // Some parts taken from wally's script showing the
--- // highlight feature.
-
+--[[
+    A class to use the Highlight feature as chams
+    Some parts taken from wally's script showing the
+    highlight feature.
+--]]
 -- // Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -371,9 +393,11 @@ Chams.__index = Chams
 
 function Chams.new()
     local self = setmetatable({
-        Enabled = true,
-        UseTeamColor = true,
+        Enabled = false,
+        UseTeamColor = false,
         Color = Color3.fromRGB(255, 0, 0),
+        FillTransparency = 1,
+        OutlineTransparency = 1,
         Objects = {}
     }, Chams)
 
@@ -383,12 +407,25 @@ function Chams.new()
 end
 
 function Chams:_init()
+    if CoreGui:FindFirstChildOfClass("Folder") then
+        pcall(function()
+            CoreGui:FindFirstChildOfClass("Folder"):Destroy()
+        end)
+    end
+
     local chamsFolder = Instance.new("Folder", CoreGui)
     chamsFolder.Name = "Chams"
 
     Players.PlayerAdded:Connect(function(player)
-        player.CharacterAdded:Connect(function(char)
-            self:_MakeCham(char)
+        player.CharacterAdded:Connect(function()
+            self:_MakeCham(player.Character)
+        end)
+
+        player.CharacterRemoving:Connect(function(char)
+            if self.Objects[player.Character.name] then
+                self.Objects[char.Name]:Destroy()
+                self.Objects[char.Name] = nil
+            end
         end)
     end)
 
@@ -399,27 +436,37 @@ function Chams:_init()
         end
     end)
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        self:_MakeEsp(player.Character)
+    for _, player in pairs(Players:GetPlayers()) do
+        self:_MakeCham(player.Character)
     end
 
     self.RenderSteppedLoop = RenderStepped:Connect(function()
-        ---@type Highlight
-        for _, highlight in pairs(self.Objects) do
-            local player = Players:GetPlayerFromCharacter(highlight.Adornee)
-            local colorToUse = self.UseTeamColor and player.TeamColor.Color or self.Color
+        local s, err = pcall(function()
+            ---@type Highlight
+            for _, highlight in pairs(self.Objects) do
+                local player = Players:GetPlayerFromCharacter(highlight.Adornee)
+                local colorToUse = (self.UseTeamColor and player.Team ~= nil) and player.TeamColor.Color or self.Color
 
-            highlight.Enabled = self.Enabled
-            highlight.OutlineColor = colorToUse
-            highlight.FillColor = colorToUse        
+                highlight.Enabled = self.Enabled
+                highlight.OutlineColor = colorToUse
+                highlight.FillColor = colorToUse
+                highlight.FillTransparency = self.FillTransparency
+            end
+        end)
+
+        if not s then
+            for i = 1, 5 do
+                error(err)
+            end
+            self.RenderSteppedLoop:Disconnect()
         end
     end)
 end
 
 function Chams:_MakeCham(char)
-    pcall(function()
+    local s, err = pcall(function()
         local player = Players:GetPlayerFromCharacter(char)
-        local colorToUse = self.UseTeamColor and player.TeamColor.Color or self.Color
+        local colorToUse = (self.UseTeamColor and player.Team ~= nil) and player.TeamColor.Color or self.Color
 
         local highlight = Instance.new("Highlight", CoreGui.Chams)
 
@@ -431,6 +478,13 @@ function Chams:_MakeCham(char)
 
         self.Objects[char.Name] = highlight
     end)
+
+    if not s then
+        for i = 1, 5 do
+            error(err)
+        end
+        self.RenderSteppedLoop:Disconnect()
+    end
 end
 
 function Chams:Toggle(state)
@@ -451,7 +505,6 @@ local Util = require("modules/util/Util")
 
 local Linoria = {}
 
--- // returns Library, Window, ThemeManager and SaveManager.
 function Linoria:createLinoriaLib(gameName)
     Library:SetWatermarkVisibility(true)
     Library:SetWatermark('project floppa - ' .. gameName)
@@ -474,19 +527,17 @@ function Linoria:initManagers(Lib, Window)
     local Settings = Window:AddTab("Settings")
 
     ThemeManager:SetLibrary(Lib)
+
     SaveManager:SetLibrary(Lib)
-
     SaveManager:IgnoreThemeSettings()
-
     SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
 
     ThemeManager:SetFolder('project-floppa')
-    SaveManager:SetFolder('project-floppa/game')
 
+    SaveManager:SetFolder('project-floppa/game')
     SaveManager:BuildConfigSection(Settings)
 
     ThemeManager:ApplyToTab(Settings)
-
 end
 
 return Linoria
