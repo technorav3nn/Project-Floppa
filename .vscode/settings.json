@@ -3,6 +3,13 @@
         "getgenv",
         "Options",
         "fireproximityprompt",
-        "Toggles"
+        "Toggles",
+        "firesignal",
+        "getrenv",
+        "getsenv",
+        "getconnections",
+        "hookmetamethod",
+        "getnamecallmethod",
+        "newcclosure"
     ]
 }

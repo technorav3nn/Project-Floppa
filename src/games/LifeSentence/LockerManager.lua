@@ -4,6 +4,8 @@ local Compatiblity = require("modules/exploit/Compatiblity")
 local TableUtil = require("modules/util/TableUtil")
 local Character = require("modules/exploit/Character")
 
+local teleport = require("games/LifeSentence/TpBypass")
+
 -- // LockerManager
 local LockerManager = {}
 
@@ -121,8 +123,10 @@ function LockerManager:StoreItem(item)
     local oldCFrame = Character:GetCFrame()
     local locker = game:GetService("Workspace"):FindFirstChild("Locker")
 
-    localPlayer.Character.HumanoidRootPart.CFrame =
-        locker.HumanoidRootPart.CFrame + Vector3.new(0, 0, -3)
+    teleport(locker.HumanoidRootPart.CFrame + Vector3.new(0, 0, -3))
+
+    --localPlayer.Character.HumanoidRootPart.CFrame =
+    --    locker.HumanoidRootPart.CFrame + Vector3.new(0, 0, -3)
 
     task.wait(0.5)
     Compatiblity:fireproximityprompt(locker.HumanoidRootPart.Attachment.ProximityPrompt, 1, false)
@@ -130,13 +134,17 @@ function LockerManager:StoreItem(item)
     if not localPlayer.Character:FindFirstChild(item.Name) then
         localPlayer.Character.Humanoid:EquipTool(item)
     end
+
     task.wait(0.5)
     self:_LockerEvent("LockerStore", item)
-    task.wait(0.7)
-
-    localPlayer.Character.HumanoidRootPart.CFrame = oldCFrame
+    task.wait(0.3)
+    firesignal(localPlayer.PlayerGui.HUD.LockerFrame.Inventory.ExitButton.MouseButton1Click)
+    --localPlayer.Character.Humanoid:MoveTo(Character:GetPosition() + Vector3.new(0, 0, -5))
+    --localPlayer.Character.Humanoid.MoveToFinished:Wait()
+    task.wait(0.5)
+    teleport(oldCFrame)
     task.wait(1)
-    localPlayer.Character.HumanoidRootPart.CFrame = oldCFrame
+    teleport(oldCFrame)
 end
 
 return LockerManager
