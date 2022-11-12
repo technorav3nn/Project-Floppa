@@ -5,10 +5,6 @@ local LockerManager = require("games/LifeSentence/LockerManager")
 local FarmingManager = require("games/LifeSentence/FarmingManager")
 local CraftingManager = require("games/LifeSentence/CraftingManager")
 local AutobuyManager = require("games/LifeSentence/AutobuyManager")
-local AimingManager = require("games/LifeSentence/AimingManager")
-
-local Aiming = AimingManager.Aiming
-local AimingSettings = Aiming.Settings
 
 local Players = game:GetService("Players")
 
@@ -30,21 +26,14 @@ local maids = {
 local Tabs = {
     Player = Window:AddTab("Player"),
     Items = Window:AddTab("Items"),
+    Farming = Window:AddTab("Farming"),
     Visuals = Window:AddTab("Visuals"),
-    Misc = Window:AddTab("Miscellaneous"),
     Settings = settingsTab
 }
 
 -- // Player Tab
 do
-    local CombatGroupBox = Tabs.Player:AddLeftGroupbox("Combat")
-    do
-        CombatGroupBox:AddToggle("SilentAim", {Text = "Silent Aim"}):OnChanged(function()
-            AimingManager:Toggle(Toggles.SilentAim.Value)
-        end)
-    end
-
-    local MovementGroupBox = Tabs.Player:AddRightGroupbox("Movement")
+    local MovementGroupBox = Tabs.Player:AddLeftGroupbox("Movement")
     do
         MovementGroupBox:AddToggle("InfStamina", { Text = "Infinite Stamina "}):OnChanged(function()
             if Toggles.InfStamina.Value then
@@ -78,7 +67,7 @@ do
             end
         end)
         MovementGroupBox:AddSlider("WalkSpeed", { Text = "Walkspeed Amount", Min = 16, Max = 500, Default = 16, Rounding = 0, Compact = true })
-        
+
         MovementGroupBox:AddToggle("JumpPowerToggle", { Text = "JumpPower"})
         MovementGroupBox:AddSlider("JumpPower", { Text = "JumpPower Amount", Min = 50, Max = 500, Default = 50, Rounding = 0, Compact = true })
     end
@@ -149,15 +138,78 @@ do
     end
 end
 
+-- // Farming Tab
+do
+    local SafeFarmGroupBox = Tabs.Farming:AddLeftGroupbox("Safe farm")
+    do
+        SafeFarmGroupBox:AddToggle("SafeFarmEnabled", { Text = "Enabled" }):OnChanged(function()
+            FarmingManager.AutoRobEnabled = Toggles.SafeFarmEnabled.Value
+            FarmingManager:LoopFarmSafes()
+        end)
+    end
+end
+
 -- // Visuals Tab
 do
-    local ESPGroupBox = Tabs.Visuals:AddLeftGroupbox("ESP")
     do
-        ESPGroupBox:AddToggle('ESPEnabled', { Text = "Enabled" })
+        local ESPGroupBox, ESPOptionsGroupBox, ESP = Linoria:buildESPBoxes(Tabs.Visuals)
+
+        ESP:AddObjectListener(game:GetService("Workspace").Robbable, {
+            ColorDynamic = function()
+                return Color3.fromRGB(55, 255, 0)
+            end,
+            Validator = function(obj)
+                return obj.Name == "Safe"
+            end,
+            PrimaryPart = function(obj)
+                return obj:FindFirstChild("Back") or obj:FindFirstChild("Main")
+            end,
+            IsEnabled = "RobbableESPEnabled",
+            Name = "Safe"
+        })
+
+        ESP.Overrides.GetTeam = function(player)
+            local PlayerStats = game:GetService("ReplicatedStorage").PlayerStats
+            local stats = PlayerStats:FindFirstChild(player.Name)
+            if not stats then return false end
+
+            local cop = stats:FindFirstChild("Cop")
+            if not cop then return false end
+
+            local playerIsCop = cop.Value
+
+            if playerIsCop then
+                return true
+            else
+                return false
+            end
+        end
+
+        ESP.Overrides.GetColor = function(char)
+            local player = ESP:GetPlrFromChar(char)
+            if player then
+                if not ESP.TeamColor then
+                    return ESP.Color
+                end
+                local team = ESP:GetTeam(player)
+                if team then
+                    print('isCop')
+                    return Color3.fromRGB(0, 128, 255)
+                else
+                    return Color3.fromRGB(255, 140, 0)
+                end
+            end
+            return nil
+        end
+
+        ESPGroupBox:AddToggle("RobbableESPEnabled", { Text = "Show Robbables" }):OnChanged(function() ESP.RobbableESPEnabled = Toggles.RobbableESPEnabled.Value end)
+        --ESPTab:AddToggle("ScrapESPEnabled", { Text = "Show Scrap" }):OnChanged(function() ESP.Scrap = Toggles.ScrapESPEnabled.Value end)
     end
 
     local ChamsGroupBox = Tabs.Visuals:AddRightGroupbox("Chams")
-    Linoria:buildChamsGroupBox(ChamsGroupBox)
+    do
+        Linoria:buildChamsGroupBox(ChamsGroupBox)
+    end
 end
 
 
