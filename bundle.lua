@@ -42,13 +42,868 @@ local __bundle_require, __bundle_loaded, __bundle_register, __bundle_modules = (
 	return require, loaded, register, modules
 end)(require)
 __bundle_register("__root", function(require, _LOADED, __bundle_register, __bundle_modules)
+local DEBUG = true
+
 if not game.IsLoaded then
     game.Loaded:Wait()
 end
 
-if game.PlaceId == game.PlaceId then
+if game.PlaceId == 7860844204 then
     require("games/LifeSentence/main")
+elseif game.PlaceId == 606849621 then
+    require("games/Jailbreak/main")
 end
+end)
+__bundle_register("games/Jailbreak/main", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Linoria = require("modules/exploit/ui/LinoriaLib")
+
+local JailbreakUtil = require("games/Jailbreak/JailbreakUtil")
+
+JailbreakUtil:Notify("Loading...", 1)
+
+local CacheManager = require("games/Jailbreak/managers/CacheManager")
+local HashesManager = require("games/Jailbreak/managers/HashesManager")
+
+local Library, Window = Linoria:createLinoriaLib("jailbreak",  UDim2.fromOffset(600, 650))
+
+local Tabs = {
+    Player = Window:AddTab("Player"),
+    Combat = Window:AddTab("Combat"),
+    Visuals = Window:AddTab("Visuals"),
+    Vehicle = Window:AddTab("Vehicle"),
+    Robbery = Window:AddTab("Robberies"),
+    Teleports = Window:AddTab("Teleports"),
+    Misc = Window:AddTab("Misc"),
+}
+
+require("games/Jailbreak/ui/PlayerTab")(Tabs.Player, Library, Window)
+require("games/Jailbreak/ui/VisualsTab")(Tabs.Visuals, Library, Window)
+
+local SettingsTab = Linoria:initManagers(Library, Window)
+
+local CreditsGroupbox = SettingsTab:AddLeftGroupbox("Credits")
+do
+    CreditsGroupbox:AddLabel("Introvert1337 - Teleporting & Hashes")
+    CreditsGroupbox:AddButton("Copy Teleport Module Link", function()
+        setclipboard("https://github.com/Introvert1337/RobloxReleases/blob/main/Scripts/Jailbreak/Teleporation.lua")
+    end)
+end
+
+JailbreakUtil:Notify("Project Floppa has loaded!", 3)
+
+end)
+__bundle_register("games/Jailbreak/ui/VisualsTab", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Linoria = require("modules/exploit/ui/LinoriaLib")
+
+local Modules = require("games/Jailbreak/managers/ModuleManager")
+local Specs = Modules.UI.CircleAction.Specs
+
+
+local function visualsTab(VisualsTab)
+    local ESPGroupBox, ESPOptionsGroupBox, ESP = Linoria:buildESPBoxes(VisualsTab)
+    do
+        ESPGroupBox:AddToggle("AirdropESP", { Text = "Show Airdrops" })
+    end
+
+    local ChamsGroupBox = VisualsTab:AddRightGroupbox("Chams")
+    do
+        Linoria:buildChamsGroupBox(ChamsGroupBox)
+    end
+
+    local OtherGroupBox = VisualsTab:AddLeftGroupbox("Other")
+    do
+        OtherGroupBox:AddButton("Open Security Cameras", function() 
+            for _, v in pairs(Specs) do
+                if v.Name == "Open Security Cameras" then
+                    v:Callback(true)
+                    break
+                end
+            end
+        end)
+    end
+end
+
+return visualsTab
+end)
+__bundle_register("games/Jailbreak/managers/ModuleManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+return {
+    UI = require(ReplicatedStorage.Module:WaitForChild("UI"))
+}
+end)
+__bundle_register("modules/exploit/ui/LinoriaLib", function(require, _LOADED, __bundle_register, __bundle_modules)
+local repo = 'https://raw.githubusercontent.com/wally-rblx/LinoriaLib/main/'
+
+local Library = loadstring(game:HttpGet('https://gist.githubusercontent.com/technorav3nn/461bc96a7cf4c1acf12794f5850f21cc/raw/68cd0a13c80d3b8d3423ea475d33185cd0d10978/linoria-work-swm.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Util = require("modules/util/Util")
+local ChamsLibrary = require("modules/exploit/visuals/Chams")
+local ESP = require("modules/exploit/visuals/ESP")
+
+local Chams = ChamsLibrary.new({
+    Enabled = false,
+    UseTeamColor = false,
+    Color = Color3.new(0.035294, 0.309803, 1)
+})
+local Linoria = {}
+
+
+function Linoria:createLinoriaLib(gameName, size)
+    Library:SetWatermarkVisibility(true)
+    Library:SetWatermark('project floppa - ' .. gameName)
+
+    local Window = Library:CreateWindow({
+        Size = size,
+        Title = "project floppa - build " .. Util:getBuildId(),
+        Center = true,
+        AutoShow = true,
+    })
+
+    return Library, Window
+end
+
+function Linoria:initManagers(Lib, Window)
+    ThemeManager.BuiltInThemes.Default[2].AccentColor = Color3.fromRGB(255, 65, 65):ToHex()
+
+    local Settings = Window:AddTab("Settings")
+
+    ThemeManager:SetLibrary(Lib)
+
+    SaveManager:SetLibrary(Lib)
+    SaveManager:IgnoreThemeSettings()
+    SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+
+    ThemeManager:SetFolder('project-floppa')
+
+    SaveManager:SetFolder('project-floppa/game')
+    SaveManager:BuildConfigSection(Settings)
+
+    ThemeManager:ApplyToTab(Settings)
+
+    return Settings
+end
+
+function Linoria:buildChamsGroupBox(ChamsGroupBox)
+    ChamsGroupBox:AddToggle('ChamsEnabled', { Text = "Enabled" })
+    :OnChanged(function()
+        Chams:Toggle(Toggles.ChamsEnabled.Value)
+    end)
+
+    ChamsGroupBox:AddDivider()
+
+    ChamsGroupBox:AddSlider('ChamsFillTransparency', {
+        Text = "Fill Transparency",
+        Rounding = 1,
+        Default = 0.5,
+        Min = 0,
+        Max = 1,
+    })
+    :OnChanged(function()
+        Chams.FillTransparency = Options.ChamsFillTransparency.Value
+    end)
+
+    ChamsGroupBox:AddSlider('ChamsOutlineTransparency', {
+        Text = "Outline Transparency",
+        Rounding = 1,
+        Default = 0.5,
+        Min = 0,
+        Max = 1,
+    })
+    :OnChanged(function()
+        Chams.OutlineTransparency = Options.ChamsOutlineTransparency.Value
+    end)
+
+    ChamsGroupBox:AddDivider()
+
+
+    ChamsGroupBox:AddLabel('Fill Color'):AddColorPicker('ChamsFillColor', {
+        Default = Chams.Color,
+        Title = 'Fill Color',
+    })
+
+    Options.ChamsFillColor:OnChanged(function()
+        Chams.Color = Options.ChamsFillColor.Value
+    end)
+
+    ChamsGroupBox:AddToggle("ChamsRainbowColor", { Text = "Rainbow Color" })
+
+    task.spawn(function()
+        local i = 1
+        while task.wait() do
+            if Toggles.ChamsRainbowColor and Toggles.ChamsRainbowColor.Value then
+                i = i + 1
+                local col = Color3.fromHSV(i/360, 1, 1)
+                if i == 360 then
+                    i = 1
+                end
+                print(col)
+                Options.ChamsFillColor:SetValueRGB(col)
+            end
+        end
+    end)
+end
+
+function Linoria:buildESPBoxes(ESPTabBox)
+    
+
+    local ESPTab = ESPTabBox:AddLeftGroupbox("ESP")
+    local ESPOptionsTab = ESPTabBox:AddRightGroupbox("ESP Options")
+
+    ESPTab:AddToggle("ESPEnabled", { Text = "Enabled "}):OnChanged(function() ESP:Toggle(Toggles.ESPEnabled.Value) end)
+    ESPTab:AddToggle("PlayerESPEnabled", { Text = "Show Players" }):OnChanged(function() ESP.Players = Toggles.PlayerESPEnabled.Value end)
+    
+    ESPOptionsTab:AddToggle("UseTeamColor", { Text = "Use Team Color", Default = true }):OnChanged(function() ESP.TeamColor = Toggles.UseTeamColor.Value end)
+    ESPOptionsTab:AddToggle("ShowNames", { Text = "Show Names", Default = true }):OnChanged(function() ESP.Names = Toggles.ShowNames.Value end)
+    ESPOptionsTab:AddToggle("ShowBoxes", { Text = "Show Boxes", Default = true }):OnChanged(function() ESP.Boxes = Toggles.ShowBoxes.Value end)
+    ESPOptionsTab:AddToggle("ShowTracers", { Text = "Show Tracers" }):OnChanged(function() ESP.Tracers = Toggles.ShowTracers.Value end)
+    ESPOptionsTab:AddToggle("ShowEquippedItem", { Text = "Show Equipped Item" }):OnChanged(function() ESP.Equipped = Toggles.ShowEquippedItem.Value end)
+    ESPOptionsTab:AddToggle("ShowHealth", { Text = "Show Health Bars", Default = false }):OnChanged(function() ESP.HealthBar = Toggles.ShowHealth.Value end)
+    ESPOptionsTab:AddToggle("ShowDistance", { Text = "Show Distance", Default = true }):OnChanged(function() ESP.Distance = Toggles.ShowDistance.Value end)
+
+    ESPOptionsTab:AddSlider("MaxShownDistance", {
+        Min = 200,
+        Max = 10000,
+        Default = 2000,
+        Text = "Max Shown Distance",
+        Compact = true,
+        Rounding = 0
+    }):OnChanged(function() ESP.MaxShownDistance = Options.MaxShownDistance.Value end)
+
+    return ESPTab, ESPOptionsTab, ESP
+end
+
+return Linoria
+end)
+__bundle_register("modules/exploit/visuals/ESP", function(require, _LOADED, __bundle_register, __bundle_modules)
+--Settings--
+local ESP = {
+    Enabled = false,
+    Boxes = true,
+    BoxShift = CFrame.new(0,-1.5,0),
+	BoxSize = Vector3.new(4,6,0),
+    Color = Color3.fromRGB(255, 170, 0),
+    FaceCamera = false,
+    Names = true,
+    TeamColor = true,
+    Thickness = 2,
+    AttachShift = 1,
+    TeamMates = true,
+    Players = true,
+    
+    Objects = setmetatable({}, {__mode="kv"}),
+    Overrides = {}
+}
+
+--Declarations--
+local cam = workspace.CurrentCamera
+local plrs = game:GetService("Players")
+local plr = plrs.LocalPlayer
+local mouse = plr:GetMouse()
+
+local V3new = Vector3.new
+local WorldToViewportPoint = cam.WorldToViewportPoint
+
+--Functions--
+local function Draw(obj, props)
+	local new = Drawing.new(obj)
+	
+	props = props or {}
+	for i,v in pairs(props) do
+		new[i] = v
+	end
+	return new
+end
+
+function ESP:GetTeam(p)
+	local ov = self.Overrides.GetTeam
+	if ov then
+		return ov(p)
+	end
+	
+	return p and p.Team
+end
+
+function ESP:IsTeamMate(p)
+    local ov = self.Overrides.IsTeamMate
+	if ov then
+		return ov(p)
+    end
+    
+    return self:GetTeam(p) == self:GetTeam(plr)
+end
+
+function ESP:GetColor(obj)
+	local ov = self.Overrides.GetColor
+	if ov then
+		return ov(obj)
+    end
+    local p = self:GetPlrFromChar(obj)
+	return p and self.TeamColor and p.Team and p.Team.TeamColor.Color or self.Color
+end
+
+function ESP:GetPlrFromChar(char)
+	local ov = self.Overrides.GetPlrFromChar
+	if ov then
+		return ov(char)
+	end
+	
+	return plrs:GetPlayerFromCharacter(char)
+end
+
+function ESP:Toggle(bool)
+    self.Enabled = bool
+    if not bool then
+        for i,v in pairs(self.Objects) do
+            if v.Type == "Box" then --fov circle etc
+                if v.Temporary then
+                    v:Remove()
+                else
+                    for i,v in pairs(v.Components) do
+                        v.Visible = false
+                    end
+                end
+            end
+        end
+    end
+end
+
+function ESP:GetBox(obj)
+    return self.Objects[obj]
+end
+
+function ESP:AddObjectListener(parent, options)
+    local function NewListener(c)
+        if type(options.Type) == "string" and c:IsA(options.Type) or options.Type == nil then
+            if type(options.Name) == "string" and c.Name == options.Name or options.Name == nil then
+                if not options.Validator or options.Validator(c) then
+                    local box = ESP:Add(c, {
+                        PrimaryPart = type(options.PrimaryPart) == "string" and c:WaitForChild(options.PrimaryPart) or type(options.PrimaryPart) == "function" and options.PrimaryPart(c),
+                        Color = type(options.Color) == "function" and options.Color(c) or options.Color,
+                        ColorDynamic = options.ColorDynamic,
+                        Name = type(options.CustomName) == "function" and options.CustomName(c) or options.CustomName,
+                        IsEnabled = options.IsEnabled,
+                        RenderInNil = options.RenderInNil
+                    })
+                    --TODO: add a better way of passing options
+                    if options.OnAdded then
+                        coroutine.wrap(options.OnAdded)(box)
+                    end
+                end
+            end
+        end
+    end
+
+    if options.Recursive then
+        parent.DescendantAdded:Connect(NewListener)
+        for i,v in pairs(parent:GetDescendants()) do
+            coroutine.wrap(NewListener)(v)
+        end
+    else
+        parent.ChildAdded:Connect(NewListener)
+        for i,v in pairs(parent:GetChildren()) do
+            coroutine.wrap(NewListener)(v)
+        end
+    end
+end
+
+local boxBase = {}
+boxBase.__index = boxBase
+
+function boxBase:Remove()
+    ESP.Objects[self.Object] = nil
+    for i,v in pairs(self.Components) do
+        v.Visible = false
+        v:Remove()
+        self.Components[i] = nil
+    end
+end
+
+function boxBase:Update()
+    if not self.PrimaryPart then
+        --warn("not supposed to print", self.Object)
+        return self:Remove()
+    end
+
+    local color
+    if ESP.Highlighted == self.Object then
+       color = ESP.HighlightColor
+    else
+        color = self.Color or self.ColorDynamic and self:ColorDynamic() or ESP:GetColor(self.Object) or ESP.Color
+    end
+
+    local allow = true
+    if ESP.Overrides.UpdateAllow and not ESP.Overrides.UpdateAllow(self) then
+        allow = false
+    end
+    if self.Player and not ESP.TeamMates and ESP:IsTeamMate(self.Player) then
+        allow = false
+    end
+    if self.Player and not ESP.Players then
+        allow = false
+    end
+    if self.IsEnabled and (type(self.IsEnabled) == "string" and not ESP[self.IsEnabled] or type(self.IsEnabled) == "function" and not self:IsEnabled()) then
+        allow = false
+    end
+    if not workspace:IsAncestorOf(self.PrimaryPart) and not self.RenderInNil then
+        allow = false
+    end
+
+    if not allow then
+        for i,v in pairs(self.Components) do
+            v.Visible = false
+        end
+        return
+    end
+
+    if ESP.Highlighted == self.Object then
+        color = ESP.HighlightColor
+    end
+
+    --calculations--
+    local cf = self.PrimaryPart.CFrame
+    if ESP.FaceCamera then
+        cf = CFrame.new(cf.p, cam.CFrame.p)
+    end
+    local size = self.Size
+    local locs = {
+        TopLeft = cf * ESP.BoxShift * CFrame.new(size.X/2,size.Y/2,0),
+        TopRight = cf * ESP.BoxShift * CFrame.new(-size.X/2,size.Y/2,0),
+        BottomLeft = cf * ESP.BoxShift * CFrame.new(size.X/2,-size.Y/2,0),
+        BottomRight = cf * ESP.BoxShift * CFrame.new(-size.X/2,-size.Y/2,0),
+        TagPos = cf * ESP.BoxShift * CFrame.new(0,size.Y/2,0),
+        Torso = cf * ESP.BoxShift
+    }
+
+    if ESP.Boxes then
+        local TopLeft, Vis1 = WorldToViewportPoint(cam, locs.TopLeft.p)
+        local TopRight, Vis2 = WorldToViewportPoint(cam, locs.TopRight.p)
+        local BottomLeft, Vis3 = WorldToViewportPoint(cam, locs.BottomLeft.p)
+        local BottomRight, Vis4 = WorldToViewportPoint(cam, locs.BottomRight.p)
+
+        if self.Components.Quad then
+            if Vis1 or Vis2 or Vis3 or Vis4 then
+                self.Components.Quad.Visible = true
+                self.Components.Quad.PointA = Vector2.new(TopRight.X, TopRight.Y)
+                self.Components.Quad.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
+                self.Components.Quad.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
+                self.Components.Quad.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
+                self.Components.Quad.Color = color
+            else
+                self.Components.Quad.Visible = false
+            end
+        end
+    else
+        self.Components.Quad.Visible = false
+    end
+
+    if ESP.Names then
+        local TagPos, Vis5 = WorldToViewportPoint(cam, locs.TagPos.p)
+        
+        if Vis5 then
+            self.Components.Name.Visible = true
+            self.Components.Name.Position = Vector2.new(TagPos.X, TagPos.Y)
+            self.Components.Name.Text = self.Name
+            self.Components.Name.Color = color
+            
+            self.Components.Distance.Visible = true
+            self.Components.Distance.Position = Vector2.new(TagPos.X, TagPos.Y + 14)
+            self.Components.Distance.Text = math.floor((cam.CFrame.p - cf.p).magnitude) .."m away"
+            self.Components.Distance.Color = color
+        else
+            self.Components.Name.Visible = false
+            self.Components.Distance.Visible = false
+        end
+    else
+        self.Components.Name.Visible = false
+        self.Components.Distance.Visible = false
+    end
+    
+    if ESP.Tracers then
+        local TorsoPos, Vis6 = WorldToViewportPoint(cam, locs.Torso.p)
+
+        if Vis6 then
+            self.Components.Tracer.Visible = true
+            self.Components.Tracer.From = Vector2.new(TorsoPos.X, TorsoPos.Y)
+            self.Components.Tracer.To = Vector2.new(cam.ViewportSize.X/2,cam.ViewportSize.Y/ESP.AttachShift)
+            self.Components.Tracer.Color = color
+        else
+            self.Components.Tracer.Visible = false
+        end
+    else
+        self.Components.Tracer.Visible = false
+    end
+end
+
+function ESP:Add(obj, options)
+    if not obj.Parent and not options.RenderInNil then
+        return warn(obj, "has no parent")
+    end
+
+    local box = setmetatable({
+        Name = options.Name or obj.Name,
+        Type = "Box",
+        Color = options.Color --[[or self:GetColor(obj)]],
+        Size = options.Size or self.BoxSize,
+        Object = obj,
+        Player = options.Player or plrs:GetPlayerFromCharacter(obj),
+        PrimaryPart = options.PrimaryPart or obj.ClassName == "Model" and (obj.PrimaryPart or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")) or obj:IsA("BasePart") and obj,
+        Components = {},
+        IsEnabled = options.IsEnabled,
+        Temporary = options.Temporary,
+        ColorDynamic = options.ColorDynamic,
+        RenderInNil = options.RenderInNil
+    }, boxBase)
+
+    if self:GetBox(obj) then
+        self:GetBox(obj):Remove()
+    end
+
+    box.Components["Quad"] = Draw("Quad", {
+        Thickness = self.Thickness,
+        Color = color,
+        Transparency = 1,
+        Filled = false,
+        Visible = self.Enabled and self.Boxes
+    })
+    box.Components["Name"] = Draw("Text", {
+		Text = box.Name,
+		Color = box.Color,
+		Center = true,
+		Outline = true,
+        Size = 19,
+        Visible = self.Enabled and self.Names
+	})
+	box.Components["Distance"] = Draw("Text", {
+		Color = box.Color,
+		Center = true,
+		Outline = true,
+        Size = 19,
+        Visible = self.Enabled and self.Names
+	})
+	
+	box.Components["Tracer"] = Draw("Line", {
+		Thickness = ESP.Thickness,
+		Color = box.Color,
+        Transparency = 1,
+        Visible = self.Enabled and self.Tracers
+    })
+    self.Objects[obj] = box
+    
+    obj.AncestryChanged:Connect(function(_, parent)
+        if parent == nil and ESP.AutoRemove ~= false then
+            box:Remove()
+        end
+    end)
+    obj:GetPropertyChangedSignal("Parent"):Connect(function()
+        if obj.Parent == nil and ESP.AutoRemove ~= false then
+            box:Remove()
+        end
+    end)
+
+    local hum = obj:FindFirstChildOfClass("Humanoid")
+	if hum then
+        hum.Died:Connect(function()
+            if ESP.AutoRemove ~= false then
+                box:Remove()
+            end
+		end)
+    end
+
+    return box
+end
+
+local function CharAdded(char)
+    local p = plrs:GetPlayerFromCharacter(char)
+    if not char:FindFirstChild("HumanoidRootPart") then
+        local ev
+        ev = char.ChildAdded:Connect(function(c)
+            if c.Name == "HumanoidRootPart" then
+                ev:Disconnect()
+                ESP:Add(char, {
+                    Name = p.Name,
+                    Player = p,
+                    PrimaryPart = c
+                })
+            end
+        end)
+    else
+        ESP:Add(char, {
+            Name = p.Name,
+            Player = p,
+            PrimaryPart = char.HumanoidRootPart
+        })
+    end
+end
+local function PlayerAdded(p)
+    p.CharacterAdded:Connect(CharAdded)
+    if p.Character then
+        coroutine.wrap(CharAdded)(p.Character)
+    end
+end
+plrs.PlayerAdded:Connect(PlayerAdded)
+for i,v in pairs(plrs:GetPlayers()) do
+    if v ~= plr then
+        PlayerAdded(v)
+    end
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    cam = workspace.CurrentCamera
+    for i,v in (ESP.Enabled and pairs or ipairs)(ESP.Objects) do
+        if v.Update then
+            local s,e = pcall(v.Update, v)
+            if not s then warn("[EU]", e, v.Object:GetFullName()) end
+        end
+    end
+end)
+
+return ESP
+end)
+__bundle_register("modules/exploit/visuals/Chams", function(require, _LOADED, __bundle_register, __bundle_modules)
+--[[
+    A class to use the Highlight feature as chams
+    Some parts taken from wally's script showing the
+    highlight feature.
+--]]
+-- // Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+-- // Variables
+local RenderStepped = RunService.RenderStepped
+
+-- // Chams
+
+local Chams = {}
+Chams.__index = Chams
+
+function Chams.new()
+    local self = setmetatable({
+        Enabled = false,
+        UseTeamColor = false,
+        Color = Color3.fromRGB(255, 0, 0),
+        FillTransparency = 0.5,
+        OutlineTransparency = 0.5,
+        Objects = {}
+    }, Chams)
+
+    self:_init()
+
+    return self
+end
+
+function Chams:_init()
+    if CoreGui:FindFirstChildOfClass("Folder") then
+        pcall(function()
+            CoreGui:FindFirstChildOfClass("Folder"):Destroy()
+        end)
+    end
+
+    local chamsFolder = Instance.new("Folder", CoreGui)
+    chamsFolder.Name = "Chams"
+
+    Players.PlayerAdded:Connect(function(player)
+        self:_MakeCham(player)
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        local cham = self.Objects[player.Name]
+        if cham then
+            cham:Destroy()
+            self.Objects[player.Name] = nil
+        end
+    end)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        self:_MakeCham(player)
+    end
+
+    self.RenderSteppedLoop = RenderStepped:Connect(function()
+        local s, err = pcall(function()
+            ---@type Highlight
+            for _, highlight in pairs(self.Objects) do
+                local player = Players:GetPlayerFromCharacter(highlight.Adornee)
+                local colorToUse = (self.UseTeamColor and player.Team ~= nil) and player.TeamColor.Color or self.Color
+
+                highlight.Enabled = self.Enabled
+                highlight.OutlineColor = colorToUse
+                highlight.FillColor = colorToUse
+                highlight.FillTransparency = self.FillTransparency
+                highlight.OutlineTransparency = self.OutlineTransparency
+            end
+        end)
+
+        if not s then
+            for _ = 1, 5 do
+                error(err)
+            end
+            self.RenderSteppedLoop:Disconnect()
+        end
+    end)
+end
+
+function Chams:_MakeCham(player)
+    local s, err = pcall(function()
+        local colorToUse = (self.UseTeamColor and player.Team ~= nil) and player.TeamColor.Color or self.Color
+        
+        local highlight = Instance.new("Highlight", CoreGui.Chams)
+        highlight.Name = player.Name
+        highlight.Adornee = player.Character
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.OutlineColor = colorToUse
+        highlight.FillColor = colorToUse
+        highlight.FillTransparency = self.FillTransparency
+        highlight.OutlineTransparency = self.OutlineTransparency
+
+        self.Objects[player.Name] = highlight
+
+        player.CharacterAdded:Connect(function()
+            highlight.Adornee = player.Character
+        end)
+
+        player.CharacterRemoving:Connect(function()
+            highlight.Adornee = nil
+        end)
+    end)
+
+    if not s then
+        for _ = 1, 5 do
+            error(err)
+        end
+        self.RenderSteppedLoop:Disconnect()
+    end
+end
+
+function Chams:Toggle(state)
+    assert(type(state) == "boolean", "state of chams must be boolean!")
+    self.Enabled = state
+end
+
+return Chams
+end)
+__bundle_register("modules/util/Util", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Util = {}
+
+function Util:getBuildId()
+    -- // TODO: Add a .toml parser to get the Build Id from build-info.toml
+    return "a48bf992ns92b"
+end
+
+return Util
+end)
+__bundle_register("games/Jailbreak/ui/PlayerTab", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Player = require("modules/exploit/Player")
+local Modules = require("games/Jailbreak/managers/ModuleManager")
+
+local localPlayer = Player:GetLocalPlayer() ---@type Player
+local character = Player:GetChar() ---@type Model
+local humanoid = character:FindFirstChild("Humanoid") or character:WaitForChild("Humanoid", 3) ---@type Humanoid
+
+local function playerTab(PlayerTab)
+    local MovementGroupBox = PlayerTab:AddLeftGroupbox("Movement")
+    do
+        MovementGroupBox:AddToggle("WalkSpeedToggle", { Text = "WalkSpeed" })
+        MovementGroupBox:AddSlider("WalkSpeedAmount", { Text = "WalkSpeed Amount", Rounding = 0, Min = 16, Max = 200, Default = 100 })
+    end
+
+    -- // Non UI Stuff
+    Toggles.WalkSpeedToggle:OnChanged(function()
+        humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
+    end)
+
+    humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+        if Toggles.WalkSpeedToggle.Value then
+            humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
+        end
+    end)
+end
+
+return playerTab
+end)
+__bundle_register("modules/exploit/Player", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Players = game:GetService("Players")
+
+local localPlayer = Players.LocalPlayer
+
+local Player = {}
+
+function Player:GetLocalPlayer()
+    return localPlayer
+end
+
+function Player:GetChar()
+    return localPlayer.Character
+end
+
+return Player
+end)
+__bundle_register("games/Jailbreak/managers/HashesManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+
+end)
+__bundle_register("games/Jailbreak/managers/CacheManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Players = game:GetService("Players")
+
+local localPlayer = Players.LocalPlayer
+
+local CacheManager = {}
+
+CacheManager.Functions = {}
+CacheManager.Doors = debug.getupvalue(getconnections(game:GetService("CollectionService"):GetInstanceRemovedSignal("Door"))[1].Function, 1)
+
+-- // Look through gc for functions
+for _, v in pairs(getgc()) do
+    if type(v) == "function" and islclosure(v) then
+        if getfenv(v).script == localPlayer.PlayerScripts.LocalScript then
+            local name = debug.getinfo(v).name
+            local constants = debug.getconstants(v)
+
+            if name == "DoorSequence" then
+                CacheManager.Functions.OpenDoor = v
+            elseif name == "StopNitro" then
+                CacheManager.Functions.Events = debug.getupvalue(debug.getupvalue(v, 1), 2)
+            elseif table.find(constants, "FailedPcall") then
+                debug.setupvalue(v, 2, true)
+            elseif table.find(constants, "ExplodeWall") then
+                CacheManager.Functions.ExplodeWall = v
+            elseif table.find(constants, "VehicleHornId") then
+                CacheManager.Functions.Horn = v
+            end
+        end
+        if getfenv(v).script == game:GetService("ReplicatedStorage").Game.NukeControl then
+            local constants = debug.getconstants(v)
+            for _, v2 in pairs(constants) do
+                if v2 == "Nuke" then
+                    CacheManager.Functions.LaunchNuke = v
+                end
+            end
+        end
+    end
+end
+
+end)
+__bundle_register("games/Jailbreak/JailbreakUtil", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Notification = require(game:GetService("ReplicatedStorage").Game.Notification)
+
+local JailbreakUtil = {}
+
+function JailbreakUtil:BypassAC()
+    
+end
+
+function JailbreakUtil:Notify(message, duration)
+    Notification.new(
+        {
+            Text = message,
+            Duration = duration or 5
+        }
+    )
+end
+
+return JailbreakUtil
 end)
 __bundle_register("games/LifeSentence/main", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Linoria = require("modules/exploit/ui/LinoriaLib")
@@ -867,668 +1722,5 @@ end
 Maid.Destroy = Maid.DoCleaning
 
 return Maid
-end)
-__bundle_register("modules/exploit/ui/LinoriaLib", function(require, _LOADED, __bundle_register, __bundle_modules)
-local repo = 'https://raw.githubusercontent.com/wally-rblx/LinoriaLib/main/'
-
-local Library = loadstring(game:HttpGet('https://gist.githubusercontent.com/technorav3nn/461bc96a7cf4c1acf12794f5850f21cc/raw/68cd0a13c80d3b8d3423ea475d33185cd0d10978/linoria-work-swm.lua'))()
-local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
-local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
-
-local Util = require("modules/util/Util")
-local ChamsLibrary = require("modules/exploit/visuals/Chams")
-local ESP = require("modules/exploit/visuals/ESP")
-
-local Chams = ChamsLibrary.new({
-    Enabled = false,
-    UseTeamColor = false,
-    Color = Color3.new(0.035294, 0.309803, 1)
-})
-local Linoria = {}
-
-
-function Linoria:createLinoriaLib(gameName)
-    Library:SetWatermarkVisibility(true)
-    Library:SetWatermark('project floppa - ' .. gameName)
-
-    local Window = Library:CreateWindow({
-        -- // Position and Size are also valid options
-        -- // but you do not need to define them unless you are changing them :)
-        Title = "project floppa - build " .. Util:getBuildId(),
-        Center = true,
-        AutoShow = true,
-    })
-
-
-    return Library, Window
-end
-
-function Linoria:initManagers(Lib, Window)
-    ThemeManager.BuiltInThemes.Default[2].AccentColor = Color3.fromRGB(255, 65, 65):ToHex()
-
-    local Settings = Window:AddTab("Settings")
-
-    ThemeManager:SetLibrary(Lib)
-
-    SaveManager:SetLibrary(Lib)
-    SaveManager:IgnoreThemeSettings()
-    SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
-
-    ThemeManager:SetFolder('project-floppa')
-
-    SaveManager:SetFolder('project-floppa/game')
-    SaveManager:BuildConfigSection(Settings)
-
-    ThemeManager:ApplyToTab(Settings)
-end
-
-function Linoria:buildChamsGroupBox(ChamsGroupBox)
-    ChamsGroupBox:AddToggle('ChamsEnabled', { Text = "Enabled" })
-    :OnChanged(function()
-        Chams:Toggle(Toggles.ChamsEnabled.Value)
-    end)
-
-    ChamsGroupBox:AddDivider()
-
-    ChamsGroupBox:AddSlider('ChamsFillTransparency', {
-        Text = "Fill Transparency",
-        Rounding = 1,
-        Default = 0.5,
-        Min = 0,
-        Max = 1,
-    })
-    :OnChanged(function()
-        Chams.FillTransparency = Options.ChamsFillTransparency.Value
-    end)
-
-    ChamsGroupBox:AddSlider('ChamsOutlineTransparency', {
-        Text = "Outline Transparency",
-        Rounding = 1,
-        Default = 0.5,
-        Min = 0,
-        Max = 1,
-    })
-    :OnChanged(function()
-        Chams.OutlineTransparency = Options.ChamsOutlineTransparency.Value
-    end)
-
-    ChamsGroupBox:AddDivider()
-
-
-    ChamsGroupBox:AddLabel('Fill Color'):AddColorPicker('ChamsFillColor', {
-        Default = Chams.Color,
-        Title = 'Fill Color',
-    })
-
-    Options.ChamsFillColor:OnChanged(function()
-        Chams.Color = Options.ChamsFillColor.Value
-    end)
-
-    ChamsGroupBox:AddToggle("ChamsRainbowColor", { Text = "Rainbow Color" })
-
-    task.spawn(function()
-        local i = 1
-        while task.wait() do
-            if Toggles.ChamsRainbowColor and Toggles.ChamsRainbowColor.Value then
-                i = i + 1
-                local col = Color3.fromHSV(i/360, 1, 1)
-                if i == 360 then
-                    i = 1
-                end
-                print(col)
-                Options.ChamsFillColor:SetValueRGB(col)
-            end
-        end
-    end)
-end
-
-function Linoria:buildESPBoxes(ESPTabBox)
-    
-
-    local ESPTab = ESPTabBox:AddLeftGroupbox("ESP")
-    local ESPOptionsTab = ESPTabBox:AddRightGroupbox("ESP Options")
-
-    ESPTab:AddToggle("ESPEnabled", { Text = "Enabled "}):OnChanged(function() ESP:Toggle(Toggles.ESPEnabled.Value) end)
-    ESPTab:AddToggle("PlayerESPEnabled", { Text = "Show Players" }):OnChanged(function() ESP.Players = Toggles.PlayerESPEnabled.Value end)
-    
-    ESPOptionsTab:AddToggle("UseTeamColor", { Text = "Use Team Color", Default = true }):OnChanged(function() ESP.TeamColor = Toggles.UseTeamColor.Value end)
-    ESPOptionsTab:AddToggle("ShowNames", { Text = "Show Names", Default = true }):OnChanged(function() ESP.Names = Toggles.ShowNames.Value end)
-    ESPOptionsTab:AddToggle("ShowBoxes", { Text = "Show Boxes", Default = true }):OnChanged(function() ESP.Boxes = Toggles.ShowBoxes.Value end)
-    ESPOptionsTab:AddToggle("ShowTracers", { Text = "Show Tracers" }):OnChanged(function() ESP.Tracers = Toggles.ShowTracers.Value end)
-    ESPOptionsTab:AddToggle("ShowEquippedItem", { Text = "Show Equipped Item" }):OnChanged(function() ESP.Equipped = Toggles.ShowEquippedItem.Value end)
-    ESPOptionsTab:AddToggle("ShowHealth", { Text = "Show Health Bars", Default = false }):OnChanged(function() ESP.HealthBar = Toggles.ShowHealth.Value end)
-    ESPOptionsTab:AddToggle("ShowDistance", { Text = "Show Distance", Default = true }):OnChanged(function() ESP.Distance = Toggles.ShowDistance.Value end)
-
-    ESPOptionsTab:AddSlider("MaxShownDistance", {
-        Min = 200,
-        Max = 10000,
-        Default = 2000,
-        Text = "Max Shown Distance",
-        Compact = true,
-        Rounding = 0
-    }):OnChanged(function() ESP.MaxShownDistance = Options.MaxShownDistance.Value end)
-
-    return ESPTab, ESPOptionsTab, ESP
-end
-
-return Linoria
-end)
-__bundle_register("modules/exploit/visuals/ESP", function(require, _LOADED, __bundle_register, __bundle_modules)
---Settings--
-local ESP = {
-    Enabled = false,
-    Boxes = true,
-    BoxShift = CFrame.new(0,-1.5,0),
-	BoxSize = Vector3.new(4,6,0),
-    Color = Color3.fromRGB(255, 170, 0),
-    FaceCamera = false,
-    Names = true,
-    TeamColor = true,
-    Thickness = 2,
-    AttachShift = 1,
-    TeamMates = true,
-    Players = true,
-    
-    Objects = setmetatable({}, {__mode="kv"}),
-    Overrides = {}
-}
-
---Declarations--
-local cam = workspace.CurrentCamera
-local plrs = game:GetService("Players")
-local plr = plrs.LocalPlayer
-local mouse = plr:GetMouse()
-
-local V3new = Vector3.new
-local WorldToViewportPoint = cam.WorldToViewportPoint
-
---Functions--
-local function Draw(obj, props)
-	local new = Drawing.new(obj)
-	
-	props = props or {}
-	for i,v in pairs(props) do
-		new[i] = v
-	end
-	return new
-end
-
-function ESP:GetTeam(p)
-	local ov = self.Overrides.GetTeam
-	if ov then
-		return ov(p)
-	end
-	
-	return p and p.Team
-end
-
-function ESP:IsTeamMate(p)
-    local ov = self.Overrides.IsTeamMate
-	if ov then
-		return ov(p)
-    end
-    
-    return self:GetTeam(p) == self:GetTeam(plr)
-end
-
-function ESP:GetColor(obj)
-	local ov = self.Overrides.GetColor
-	if ov then
-		return ov(obj)
-    end
-    local p = self:GetPlrFromChar(obj)
-	return p and self.TeamColor and p.Team and p.Team.TeamColor.Color or self.Color
-end
-
-function ESP:GetPlrFromChar(char)
-	local ov = self.Overrides.GetPlrFromChar
-	if ov then
-		return ov(char)
-	end
-	
-	return plrs:GetPlayerFromCharacter(char)
-end
-
-function ESP:Toggle(bool)
-    self.Enabled = bool
-    if not bool then
-        for i,v in pairs(self.Objects) do
-            if v.Type == "Box" then --fov circle etc
-                if v.Temporary then
-                    v:Remove()
-                else
-                    for i,v in pairs(v.Components) do
-                        v.Visible = false
-                    end
-                end
-            end
-        end
-    end
-end
-
-function ESP:GetBox(obj)
-    return self.Objects[obj]
-end
-
-function ESP:AddObjectListener(parent, options)
-    local function NewListener(c)
-        if type(options.Type) == "string" and c:IsA(options.Type) or options.Type == nil then
-            if type(options.Name) == "string" and c.Name == options.Name or options.Name == nil then
-                if not options.Validator or options.Validator(c) then
-                    local box = ESP:Add(c, {
-                        PrimaryPart = type(options.PrimaryPart) == "string" and c:WaitForChild(options.PrimaryPart) or type(options.PrimaryPart) == "function" and options.PrimaryPart(c),
-                        Color = type(options.Color) == "function" and options.Color(c) or options.Color,
-                        ColorDynamic = options.ColorDynamic,
-                        Name = type(options.CustomName) == "function" and options.CustomName(c) or options.CustomName,
-                        IsEnabled = options.IsEnabled,
-                        RenderInNil = options.RenderInNil
-                    })
-                    --TODO: add a better way of passing options
-                    if options.OnAdded then
-                        coroutine.wrap(options.OnAdded)(box)
-                    end
-                end
-            end
-        end
-    end
-
-    if options.Recursive then
-        parent.DescendantAdded:Connect(NewListener)
-        for i,v in pairs(parent:GetDescendants()) do
-            coroutine.wrap(NewListener)(v)
-        end
-    else
-        parent.ChildAdded:Connect(NewListener)
-        for i,v in pairs(parent:GetChildren()) do
-            coroutine.wrap(NewListener)(v)
-        end
-    end
-end
-
-local boxBase = {}
-boxBase.__index = boxBase
-
-function boxBase:Remove()
-    ESP.Objects[self.Object] = nil
-    for i,v in pairs(self.Components) do
-        v.Visible = false
-        v:Remove()
-        self.Components[i] = nil
-    end
-end
-
-function boxBase:Update()
-    if not self.PrimaryPart then
-        --warn("not supposed to print", self.Object)
-        return self:Remove()
-    end
-
-    local color
-    if ESP.Highlighted == self.Object then
-       color = ESP.HighlightColor
-    else
-        color = self.Color or self.ColorDynamic and self:ColorDynamic() or ESP:GetColor(self.Object) or ESP.Color
-    end
-
-    local allow = true
-    if ESP.Overrides.UpdateAllow and not ESP.Overrides.UpdateAllow(self) then
-        allow = false
-    end
-    if self.Player and not ESP.TeamMates and ESP:IsTeamMate(self.Player) then
-        allow = false
-    end
-    if self.Player and not ESP.Players then
-        allow = false
-    end
-    if self.IsEnabled and (type(self.IsEnabled) == "string" and not ESP[self.IsEnabled] or type(self.IsEnabled) == "function" and not self:IsEnabled()) then
-        allow = false
-    end
-    if not workspace:IsAncestorOf(self.PrimaryPart) and not self.RenderInNil then
-        allow = false
-    end
-
-    if not allow then
-        for i,v in pairs(self.Components) do
-            v.Visible = false
-        end
-        return
-    end
-
-    if ESP.Highlighted == self.Object then
-        color = ESP.HighlightColor
-    end
-
-    --calculations--
-    local cf = self.PrimaryPart.CFrame
-    if ESP.FaceCamera then
-        cf = CFrame.new(cf.p, cam.CFrame.p)
-    end
-    local size = self.Size
-    local locs = {
-        TopLeft = cf * ESP.BoxShift * CFrame.new(size.X/2,size.Y/2,0),
-        TopRight = cf * ESP.BoxShift * CFrame.new(-size.X/2,size.Y/2,0),
-        BottomLeft = cf * ESP.BoxShift * CFrame.new(size.X/2,-size.Y/2,0),
-        BottomRight = cf * ESP.BoxShift * CFrame.new(-size.X/2,-size.Y/2,0),
-        TagPos = cf * ESP.BoxShift * CFrame.new(0,size.Y/2,0),
-        Torso = cf * ESP.BoxShift
-    }
-
-    if ESP.Boxes then
-        local TopLeft, Vis1 = WorldToViewportPoint(cam, locs.TopLeft.p)
-        local TopRight, Vis2 = WorldToViewportPoint(cam, locs.TopRight.p)
-        local BottomLeft, Vis3 = WorldToViewportPoint(cam, locs.BottomLeft.p)
-        local BottomRight, Vis4 = WorldToViewportPoint(cam, locs.BottomRight.p)
-
-        if self.Components.Quad then
-            if Vis1 or Vis2 or Vis3 or Vis4 then
-                self.Components.Quad.Visible = true
-                self.Components.Quad.PointA = Vector2.new(TopRight.X, TopRight.Y)
-                self.Components.Quad.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
-                self.Components.Quad.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
-                self.Components.Quad.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
-                self.Components.Quad.Color = color
-            else
-                self.Components.Quad.Visible = false
-            end
-        end
-    else
-        self.Components.Quad.Visible = false
-    end
-
-    if ESP.Names then
-        local TagPos, Vis5 = WorldToViewportPoint(cam, locs.TagPos.p)
-        
-        if Vis5 then
-            self.Components.Name.Visible = true
-            self.Components.Name.Position = Vector2.new(TagPos.X, TagPos.Y)
-            self.Components.Name.Text = self.Name
-            self.Components.Name.Color = color
-            
-            self.Components.Distance.Visible = true
-            self.Components.Distance.Position = Vector2.new(TagPos.X, TagPos.Y + 14)
-            self.Components.Distance.Text = math.floor((cam.CFrame.p - cf.p).magnitude) .."m away"
-            self.Components.Distance.Color = color
-        else
-            self.Components.Name.Visible = false
-            self.Components.Distance.Visible = false
-        end
-    else
-        self.Components.Name.Visible = false
-        self.Components.Distance.Visible = false
-    end
-    
-    if ESP.Tracers then
-        local TorsoPos, Vis6 = WorldToViewportPoint(cam, locs.Torso.p)
-
-        if Vis6 then
-            self.Components.Tracer.Visible = true
-            self.Components.Tracer.From = Vector2.new(TorsoPos.X, TorsoPos.Y)
-            self.Components.Tracer.To = Vector2.new(cam.ViewportSize.X/2,cam.ViewportSize.Y/ESP.AttachShift)
-            self.Components.Tracer.Color = color
-        else
-            self.Components.Tracer.Visible = false
-        end
-    else
-        self.Components.Tracer.Visible = false
-    end
-end
-
-function ESP:Add(obj, options)
-    if not obj.Parent and not options.RenderInNil then
-        return warn(obj, "has no parent")
-    end
-
-    local box = setmetatable({
-        Name = options.Name or obj.Name,
-        Type = "Box",
-        Color = options.Color --[[or self:GetColor(obj)]],
-        Size = options.Size or self.BoxSize,
-        Object = obj,
-        Player = options.Player or plrs:GetPlayerFromCharacter(obj),
-        PrimaryPart = options.PrimaryPart or obj.ClassName == "Model" and (obj.PrimaryPart or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")) or obj:IsA("BasePart") and obj,
-        Components = {},
-        IsEnabled = options.IsEnabled,
-        Temporary = options.Temporary,
-        ColorDynamic = options.ColorDynamic,
-        RenderInNil = options.RenderInNil
-    }, boxBase)
-
-    if self:GetBox(obj) then
-        self:GetBox(obj):Remove()
-    end
-
-    box.Components["Quad"] = Draw("Quad", {
-        Thickness = self.Thickness,
-        Color = color,
-        Transparency = 1,
-        Filled = false,
-        Visible = self.Enabled and self.Boxes
-    })
-    box.Components["Name"] = Draw("Text", {
-		Text = box.Name,
-		Color = box.Color,
-		Center = true,
-		Outline = true,
-        Size = 19,
-        Visible = self.Enabled and self.Names
-	})
-	box.Components["Distance"] = Draw("Text", {
-		Color = box.Color,
-		Center = true,
-		Outline = true,
-        Size = 19,
-        Visible = self.Enabled and self.Names
-	})
-	
-	box.Components["Tracer"] = Draw("Line", {
-		Thickness = ESP.Thickness,
-		Color = box.Color,
-        Transparency = 1,
-        Visible = self.Enabled and self.Tracers
-    })
-    self.Objects[obj] = box
-    
-    obj.AncestryChanged:Connect(function(_, parent)
-        if parent == nil and ESP.AutoRemove ~= false then
-            box:Remove()
-        end
-    end)
-    obj:GetPropertyChangedSignal("Parent"):Connect(function()
-        if obj.Parent == nil and ESP.AutoRemove ~= false then
-            box:Remove()
-        end
-    end)
-
-    local hum = obj:FindFirstChildOfClass("Humanoid")
-	if hum then
-        hum.Died:Connect(function()
-            if ESP.AutoRemove ~= false then
-                box:Remove()
-            end
-		end)
-    end
-
-    return box
-end
-
-local function CharAdded(char)
-    local p = plrs:GetPlayerFromCharacter(char)
-    if not char:FindFirstChild("HumanoidRootPart") then
-        local ev
-        ev = char.ChildAdded:Connect(function(c)
-            if c.Name == "HumanoidRootPart" then
-                ev:Disconnect()
-                ESP:Add(char, {
-                    Name = p.Name,
-                    Player = p,
-                    PrimaryPart = c
-                })
-            end
-        end)
-    else
-        ESP:Add(char, {
-            Name = p.Name,
-            Player = p,
-            PrimaryPart = char.HumanoidRootPart
-        })
-    end
-end
-local function PlayerAdded(p)
-    p.CharacterAdded:Connect(CharAdded)
-    if p.Character then
-        coroutine.wrap(CharAdded)(p.Character)
-    end
-end
-plrs.PlayerAdded:Connect(PlayerAdded)
-for i,v in pairs(plrs:GetPlayers()) do
-    if v ~= plr then
-        PlayerAdded(v)
-    end
-end
-
-game:GetService("RunService").RenderStepped:Connect(function()
-    cam = workspace.CurrentCamera
-    for i,v in (ESP.Enabled and pairs or ipairs)(ESP.Objects) do
-        if v.Update then
-            local s,e = pcall(v.Update, v)
-            if not s then warn("[EU]", e, v.Object:GetFullName()) end
-        end
-    end
-end)
-
-return ESP
-end)
-__bundle_register("modules/exploit/visuals/Chams", function(require, _LOADED, __bundle_register, __bundle_modules)
---[[
-    A class to use the Highlight feature as chams
-    Some parts taken from wally's script showing the
-    highlight feature.
---]]
--- // Services
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-
--- // Variables
-local RenderStepped = RunService.RenderStepped
-
--- // Chams
-
-local Chams = {}
-Chams.__index = Chams
-
-function Chams.new()
-    local self = setmetatable({
-        Enabled = false,
-        UseTeamColor = false,
-        Color = Color3.fromRGB(255, 0, 0),
-        FillTransparency = 0.5,
-        OutlineTransparency = 0.5,
-        Objects = {}
-    }, Chams)
-
-    self:_init()
-
-    return self
-end
-
-function Chams:_init()
-    if CoreGui:FindFirstChildOfClass("Folder") then
-        pcall(function()
-            CoreGui:FindFirstChildOfClass("Folder"):Destroy()
-        end)
-    end
-
-    local chamsFolder = Instance.new("Folder", CoreGui)
-    chamsFolder.Name = "Chams"
-
-    Players.PlayerAdded:Connect(function(player)
-        self:_MakeCham(player)
-    end)
-
-    Players.PlayerRemoving:Connect(function(player)
-        local cham = self.Objects[player.Name]
-        if cham then
-            cham:Destroy()
-            self.Objects[player.Name] = nil
-        end
-    end)
-
-    for _, player in pairs(Players:GetPlayers()) do
-        self:_MakeCham(player)
-    end
-
-    self.RenderSteppedLoop = RenderStepped:Connect(function()
-        local s, err = pcall(function()
-            ---@type Highlight
-            for _, highlight in pairs(self.Objects) do
-                local player = Players:GetPlayerFromCharacter(highlight.Adornee)
-                local colorToUse = (self.UseTeamColor and player.Team ~= nil) and player.TeamColor.Color or self.Color
-
-                highlight.Enabled = self.Enabled
-                highlight.OutlineColor = colorToUse
-                highlight.FillColor = colorToUse
-                highlight.FillTransparency = self.FillTransparency
-                highlight.OutlineTransparency = self.OutlineTransparency
-            end
-        end)
-
-        if not s then
-            for _ = 1, 5 do
-                error(err)
-            end
-            self.RenderSteppedLoop:Disconnect()
-        end
-    end)
-end
-
-function Chams:_MakeCham(player)
-    local s, err = pcall(function()
-        local colorToUse = (self.UseTeamColor and player.Team ~= nil) and player.TeamColor.Color or self.Color
-        
-        local highlight = Instance.new("Highlight", CoreGui.Chams)
-        highlight.Name = player.Name
-        highlight.Adornee = player.Character
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.OutlineColor = colorToUse
-        highlight.FillColor = colorToUse
-        highlight.FillTransparency = self.FillTransparency
-        highlight.OutlineTransparency = self.OutlineTransparency
-
-        self.Objects[player.Name] = highlight
-
-        player.CharacterAdded:Connect(function()
-            highlight.Adornee = player.Character
-        end)
-
-        player.CharacterRemoving:Connect(function()
-            highlight.Adornee = nil
-        end)
-    end)
-
-    if not s then
-        for _ = 1, 5 do
-            error(err)
-        end
-        self.RenderSteppedLoop:Disconnect()
-    end
-end
-
-function Chams:Toggle(state)
-    assert(type(state) == "boolean", "state of chams must be boolean!")
-    self.Enabled = state
-end
-
-return Chams
-end)
-__bundle_register("modules/util/Util", function(require, _LOADED, __bundle_register, __bundle_modules)
-local Util = {}
-
-function Util:getBuildId()
-    -- // TODO: Add a .toml parser to get the Build Id from build-info.toml
-    return "a48bf992ns92b"
-end
-
-return Util
 end)
 return __bundle_require("__root")

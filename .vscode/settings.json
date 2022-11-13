@@ -11,6 +11,9 @@
         "hookmetamethod",
         "getnamecallmethod",
         "newcclosure",
-        "Drawing"
+        "Drawing",
+        "islclosure",
+        "getgc",
+        "setclipboard"
     ]
 }
