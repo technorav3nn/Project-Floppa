@@ -14,6 +14,8 @@
         "Drawing",
         "islclosure",
         "getgc",
-        "setclipboard"
+        "setclipboard",
+        "identifyexecutor",
+        "readfile"
     ]
 }

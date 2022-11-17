@@ -1,10 +1,15 @@
 local Linoria = require("modules/exploit/ui/LinoriaLib")
+local Util = require("modules/util/Util")
 
 local Modules = require("games/Jailbreak/managers/ModuleManager")
 local Specs = Modules.UI.CircleAction.Specs
 
 
 local function visualsTab(VisualsTab)
+    if Util:isScriptWareM() then
+        VisualsTab:AddLeftGroupbox("Unsupported"):AddLabel("Your exploit isn't supported")
+        return
+    end
     local ESPGroupBox, ESPOptionsGroupBox, ESP = Linoria:buildESPBoxes(VisualsTab)
     do
         ESPGroupBox:AddToggle("AirdropESP", { Text = "Show Airdrops" })

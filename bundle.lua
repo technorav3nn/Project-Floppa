@@ -94,12 +94,17 @@ JailbreakUtil:Notify("Project Floppa has loaded!", 3)
 end)
 __bundle_register("games/Jailbreak/ui/VisualsTab", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Linoria = require("modules/exploit/ui/LinoriaLib")
+local Util = require("modules/util/Util")
 
 local Modules = require("games/Jailbreak/managers/ModuleManager")
 local Specs = Modules.UI.CircleAction.Specs
 
 
 local function visualsTab(VisualsTab)
+    if Util:isScriptWareM() then
+        VisualsTab:AddLeftGroupbox("Unsupported"):AddLabel("Your exploit isn't supported")
+        return
+    end
     local ESPGroupBox, ESPOptionsGroupBox, ESP = Linoria:buildESPBoxes(VisualsTab)
     do
         ESPGroupBox:AddToggle("AirdropESP", { Text = "Show Airdrops" })
@@ -131,6 +136,27 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 return {
     UI = require(ReplicatedStorage.Module:WaitForChild("UI"))
 }
+end)
+__bundle_register("modules/util/Util", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Util = {}
+
+function Util:getBuildId()
+    -- // TODO: Add a .toml parser to get the Build Id from build-info.toml
+    return "a48bf992ns92b"
+end
+
+-- // I use this to fix the ESP lib on Script-Ware M
+function Util:isScriptWareM()
+    local identifyexec = type(identifyexecutor) == "function" and identifyexecutor or nil
+    if identifyexec then
+        local sw, swVersion = identifyexec()
+        return swVersion == "Mac"
+    else
+        return false
+    end
+end
+
+return Util
 end)
 __bundle_register("modules/exploit/ui/LinoriaLib", function(require, _LOADED, __bundle_register, __bundle_modules)
 local repo = 'https://raw.githubusercontent.com/wally-rblx/LinoriaLib/main/'
@@ -784,16 +810,6 @@ function Chams:Toggle(state)
 end
 
 return Chams
-end)
-__bundle_register("modules/util/Util", function(require, _LOADED, __bundle_register, __bundle_modules)
-local Util = {}
-
-function Util:getBuildId()
-    -- // TODO: Add a .toml parser to get the Build Id from build-info.toml
-    return "a48bf992ns92b"
-end
-
-return Util
 end)
 __bundle_register("games/Jailbreak/ui/PlayerTab", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Player = require("modules/exploit/Player")
