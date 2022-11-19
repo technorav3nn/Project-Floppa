@@ -55,14 +55,38 @@ elseif game.PlaceId == 606849621 then
 end
 end)
 __bundle_register("games/Jailbreak/main", function(require, _LOADED, __bundle_register, __bundle_modules)
-local Linoria = require("modules/exploit/ui/LinoriaLib")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local HumanoidUnloadConsts = require(ReplicatedStorage.HumanoidUnload.HumanoidUnloadConsts);
+local WorldUnloadConsts = require(ReplicatedStorage.WorldUnload.WorldUnloadConsts)
+
+HumanoidUnloadConsts.MAX_DIST_TO_LOAD = math.huge
+WorldUnloadConsts.MAX_DIST_TO_LOAD = math.huge
+
+local Linoria = require("modules/exploit/ui/LinoriaLib")
 local JailbreakUtil = require("games/Jailbreak/JailbreakUtil")
 
 JailbreakUtil:Notify("Loading...", 1)
 
+-- // Simple AC Bypasses
+
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, index)
+    if self == humanoid and tostring(index) == "WalkSpeed" and not checkcaller() then
+        return 16
+    elseif self == humanoid and tostring(index) == "JumpPower" and not checkcaller() then
+        return 50
+    end
+
+    return oldIndex(self, index)
+end)
+
+-- // End Simple AC Bypasses
+
 local CacheManager = require("games/Jailbreak/managers/CacheManager")
-local HashesManager = require("games/Jailbreak/managers/HashesManager")
+local KeysManager = require("games/Jailbreak/managers/KeysManager")
+
+getgenv().usingLargerUI = true
 
 local Library, Window = Linoria:createLinoriaLib("jailbreak",  UDim2.fromOffset(600, 650))
 
@@ -71,13 +95,15 @@ local Tabs = {
     Combat = Window:AddTab("Combat"),
     Visuals = Window:AddTab("Visuals"),
     Vehicle = Window:AddTab("Vehicle"),
-    Robbery = Window:AddTab("Robberies"),
+    Farming = Window:AddTab("Farming"),
     Teleports = Window:AddTab("Teleports"),
     Misc = Window:AddTab("Misc"),
 }
 
 require("games/Jailbreak/ui/PlayerTab")(Tabs.Player, Library, Window)
 require("games/Jailbreak/ui/VisualsTab")(Tabs.Visuals, Library, Window)
+require("games/Jailbreak/ui/FarmingTab")(Tabs.Farming, Library, Window)
+require("games/Jailbreak/ui/CombatTab")(Tabs.Combat, Library, Window)
 
 local SettingsTab = Linoria:initManagers(Library, Window)
 
@@ -89,8 +115,248 @@ do
     end)
 end
 
+local gui = game:GetService("CoreGui"):FindFirstChild("ScreenGui")
+
 JailbreakUtil:Notify("Project Floppa has loaded!", 3)
 
+getgenv().usingLargerUI = false
+end)
+__bundle_register("games/Jailbreak/ui/CombatTab", function(require, _LOADED, __bundle_register, __bundle_modules)
+local KeysManager = require("games/Jailbreak/managers/KeysManager")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Gun = require(ReplicatedStorage.Game.Item.Gun)
+
+local Network = KeysManager.Network
+local Keys = KeysManager.Keys
+
+local allGuns = require(ReplicatedStorage.Game.GunShop.Data.Held)
+local allItems = require(ReplicatedStorage.Game.GunShop.Data.Boost)
+local allAmmo = require(ReplicatedStorage.Game.GunShop.Data.Projectile)
+
+local trollSniper = {
+    __ClassName = "Sniper",
+    LastImpactSound = 1,
+    Maid = require(ReplicatedStorage.Module.Maid),
+    LastImpact = 1,
+    Local = true,
+    Config = {},
+    IgnoreList = {},
+}
+
+Gun.SetupBulletEmitter(trollSniper)
+
+trollSniper.OnHitSurface:Connect(function()
+    print("sniper hit surface unknown if car or heli")
+end)
+
+local guns = {}
+local items = {}
+local ammoTypes = {}
+
+for _, gunTable in pairs(allGuns) do
+    table.insert(guns, gunTable.Name)
+end
+
+for _, itemTable in pairs(allItems) do
+    table.insert(items, itemTable.Name)
+end
+
+for _, ammoTable in pairs(allAmmo) do
+    if string.find(ammoTable.Name, "Cartridge") or string.find(ammoTable.Name, "Ammo") then
+        table.insert(ammoTypes, ammoTable.Name)
+    end
+end
+
+local function combatTab(CombatTab)
+    local GrabWeaponGroupBox = CombatTab:AddLeftGroupbox("Guns")
+    do
+        GrabWeaponGroupBox:AddDropdown("WeaponSelected", {
+            Default = "Shotgun",
+            Text = "Selected Gun",
+            Values = guns,
+            Compact = true
+        })
+        GrabWeaponGroupBox:AddButton("Grab Selected Gun", function()
+            Network:FireServer(Keys.GrabGun, Options.WeaponSelected.Value)
+        end)
+        GrabWeaponGroupBox:AddButton("Buy Selected  Gun", function()
+            Network:FireServer(Keys.BuyGunOrAmmo, Options.WeaponSelected.Value)
+        end)
+    end
+
+    local AmmoGroupBox = CombatTab:AddRightGroupbox("Ammo")
+    do
+        AmmoGroupBox:AddDropdown("AmmoSelected", {
+            Default = "C4Ammo",
+            Values = ammoTypes,
+            Text = "Selected Ammo Type",
+            Compact = true
+        })
+        AmmoGroupBox:AddSlider("AmmoAmount", {
+            Rounding = 0,
+            Text = "Ammo Amount",
+            Max = 10,
+            Min = 1,
+            Default = 2,
+            Compact = true
+        })
+        AmmoGroupBox:AddButton("Buy Selected Ammo", function()
+            for _ = 1, Options.AmmoAmount.Value do
+                Network:FireServer(Keys.BuyGunOrAmmo, Options.AmmoSelected.Value)
+            end
+        end)
+    end
+
+    local GrabItemGroupBox = CombatTab:AddLeftGroupbox("Items")
+    do
+        GrabItemGroupBox:AddDropdown("ItemSelected", {
+            Default = "Binoculars",
+            Text = "Selected Item",
+            Values = items,
+            Compact = true
+        })
+        GrabItemGroupBox:AddButton("Grab Selected Item", function()
+            Network:FireServer(Keys.GrabGun, Options.ItemSelected.Value)
+        end)
+        GrabItemGroupBox:AddButton("Buy Selected Item", function()
+            Network:FireServer(Keys.BuyGunOrAmmo, Options.ItemSelected.Value)
+        end)
+    end
+end
+
+return combatTab
+end)
+__bundle_register("games/Jailbreak/managers/KeysManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+local ModuleManager = require("games/Jailbreak/managers/ModuleManager")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- // Credits to Introvert1337
+local Keys, Network = loadstring(game:HttpGet("https://gist.githubusercontent.com/technorav3nn/9fe09be7c97ed916a1afdccd9150d64e/raw/74ce5f2b7985d8ecbf3ee75163de83630c6069ed/key_fetcher_fixed.lua"))()
+local KeysList = debug.getupvalue(debug.getupvalue(Network.FireServer, 1), 3)
+
+local displayList = ModuleManager.GunShopUI.displayList
+
+local KeysManager = {}
+
+-- // Credits to Introvert1337
+function KeysManager:FetchKey(fn, keyIdx)
+    local constants = debug.getconstants(fn);
+
+    for index, constant in next, constants do
+        if KeysList[constant] then -- if the constants already contain the raw key
+            return constant;
+        elseif type(constant) ~= "string" or constant == "" or #constant > 7 or constant:lower() ~= constant then
+            constants[index] = nil; -- remove constants that are 100% not the ones we need to make it a bit faster
+        end;
+    end;
+
+    local keys = {}
+
+    for key, _ in next, KeysList do
+        local prefix_passed = false;
+        local key_length = #key;
+        local keyNumber = 1
+
+        for _, constant in next, constants do
+            local constant_length = #constant;
+
+            if not prefix_passed and key:sub(1, constant_length) == constant then -- check if the key starts with one of the constants
+                prefix_passed = constant;
+            elseif prefix_passed and constant ~= prefix_passed and key:sub(key_length - (constant_length - 1), key_length) == constant then -- check if the key ends with one of the constants
+                table.insert(keys, key)
+            end;
+        end;
+    end;
+
+    return keys[keyIdx]
+end
+
+-- // I didnt loop through the keys and add them since it would be hard to tell which keys were in there
+KeysManager.Keys = {
+    GrabGun = KeysManager:FetchKey(debug.getproto(displayList, 1), 3),
+    BuyGunOrAmmo = KeysManager:FetchKey(debug.getproto(displayList, 1), 1),
+    Arrest = Keys.Arrest,
+    RedeemCode = Keys.RedeemCode
+}
+
+KeysManager.Network = Network
+
+return KeysManager
+end)
+__bundle_register("games/Jailbreak/managers/ModuleManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Game = ReplicatedStorage.Game
+local Contract = Game.Contract
+
+return {
+    UI = require(ReplicatedStorage.Module.UI),
+    Contract = require(Contract.Contract),
+    ContractSystem = require(Contract.ContractSystem),
+    GunShopUI = require(Game.GunShop.GunShopUI),
+    PlayerUtils = require(Game.PlayerUtils)
+}
+end)
+__bundle_register("games/Jailbreak/ui/FarmingTab", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Player = require("modules/exploit/Player")
+
+local ContractManager = require("games/Jailbreak/managers/ContractManager/ContractManager").new()
+
+local function farmingTab(PlayerTab)
+    local MovementGroupBox = PlayerTab:AddLeftGroupbox("Movement")
+    do
+        MovementGroupBox:AddButton("Test", function()
+            for i, v in pairs(ContractManager:GetActiveContracts()) do
+                table.foreach(v, print)
+            end
+            print("------------")
+        end)
+    end
+end
+
+return farmingTab
+end)
+__bundle_register("games/Jailbreak/managers/ContractManager/ContractManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Modules = require("games/Jailbreak/managers/ModuleManager")
+local ContractSystem = Modules.ContractSystem
+
+-- // ContractManager
+local ContractManager = {}
+
+ContractManager.__index = ContractManager
+
+function ContractManager.new()
+    local self = setmetatable({}, ContractManager)
+    return self
+end
+
+function ContractManager:GetActiveContracts()
+    return ContractSystem.getContracts()
+end
+
+return ContractManager
+end)
+__bundle_register("modules/exploit/Player", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Players = game:GetService("Players")
+
+local localPlayer = Players.LocalPlayer
+
+local Player = {}
+
+function Player:GetLocalPlayer()
+    return localPlayer
+end
+
+function Player:GetChar()
+    return localPlayer.Character
+end
+
+return Player
 end)
 __bundle_register("games/Jailbreak/ui/VisualsTab", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Linoria = require("modules/exploit/ui/LinoriaLib")
@@ -99,15 +365,22 @@ local Util = require("modules/util/Util")
 local Modules = require("games/Jailbreak/managers/ModuleManager")
 local Specs = Modules.UI.CircleAction.Specs
 
-
 local function visualsTab(VisualsTab)
-    if Util:isScriptWareM() then
-        VisualsTab:AddLeftGroupbox("Unsupported"):AddLabel("Your exploit isn't supported")
-        return
-    end
     local ESPGroupBox, ESPOptionsGroupBox, ESP = Linoria:buildESPBoxes(VisualsTab)
     do
-        ESPGroupBox:AddToggle("AirdropESP", { Text = "Show Airdrops" })
+        ESP:AddObjectListener(game.Workspace, {
+            Name = "Drop",
+            CustomName = "Airdrop",
+            Color = Color3.fromRGB(123, 255, 0),
+            PrimaryPart = function(obj)
+                return obj:FindFirstChildWhichIsA("BasePart")
+            end,
+            Validator = function(obj)
+                return obj:FindFirstChildWhichIsA("BasePart")
+            end,
+            Enabled = "AirdropESP"
+        })
+        ESPGroupBox:AddToggle("AirdropESP", { Text = "Show Airdrops" }):OnChanged(function() ESP.AirdropESP = Toggles.AirdropESP.Value end)
     end
 
     local ChamsGroupBox = VisualsTab:AddRightGroupbox("Chams")
@@ -115,9 +388,10 @@ local function visualsTab(VisualsTab)
         Linoria:buildChamsGroupBox(ChamsGroupBox)
     end
 
+
     local OtherGroupBox = VisualsTab:AddLeftGroupbox("Other")
     do
-        OtherGroupBox:AddButton("Open Security Cameras", function() 
+        OtherGroupBox:AddButton("Open Security Cameras", function()
             for _, v in pairs(Specs) do
                 if v.Name == "Open Security Cameras" then
                     v:Callback(true)
@@ -129,13 +403,6 @@ local function visualsTab(VisualsTab)
 end
 
 return visualsTab
-end)
-__bundle_register("games/Jailbreak/managers/ModuleManager", function(require, _LOADED, __bundle_register, __bundle_modules)
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-return {
-    UI = require(ReplicatedStorage.Module:WaitForChild("UI"))
-}
 end)
 __bundle_register("modules/util/Util", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Util = {}
@@ -161,21 +428,20 @@ end)
 __bundle_register("modules/exploit/ui/LinoriaLib", function(require, _LOADED, __bundle_register, __bundle_modules)
 local repo = 'https://raw.githubusercontent.com/wally-rblx/LinoriaLib/main/'
 
-local Library = loadstring(game:HttpGet('https://gist.githubusercontent.com/technorav3nn/461bc96a7cf4c1acf12794f5850f21cc/raw/68cd0a13c80d3b8d3423ea475d33185cd0d10978/linoria-work-swm.lua'))()
+local Library = loadstring(game:HttpGet('https://gist.githubusercontent.com/technorav3nn/461bc96a7cf4c1acf12794f5850f21cc/raw/7f0858a86daf5ec357932a609641bb0ea93829f7/linoria-work-swm.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
 local Util = require("modules/util/Util")
 local ChamsLibrary = require("modules/exploit/visuals/Chams")
-local ESP = require("modules/exploit/visuals/ESP")
 
 local Chams = ChamsLibrary.new({
     Enabled = false,
     UseTeamColor = false,
     Color = Color3.new(0.035294, 0.309803, 1)
 })
-local Linoria = {}
 
+local Linoria = {}
 
 function Linoria:createLinoriaLib(gameName, size)
     Library:SetWatermarkVisibility(true)
@@ -273,7 +539,7 @@ function Linoria:buildChamsGroupBox(ChamsGroupBox)
 end
 
 function Linoria:buildESPBoxes(ESPTabBox)
-    
+    local ESP = require("modules/exploit/visuals/ESP")
 
     local ESPTab = ESPTabBox:AddLeftGroupbox("ESP")
     local ESPOptionsTab = ESPTabBox:AddRightGroupbox("ESP Options")
@@ -304,6 +570,9 @@ end
 return Linoria
 end)
 __bundle_register("modules/exploit/visuals/ESP", function(require, _LOADED, __bundle_register, __bundle_modules)
+-- // edited by me
+local isSWM = require("modules/util/Util"):isScriptWareM()
+
 --Settings--
 local ESP = {
     Enabled = false,
@@ -502,27 +771,28 @@ function boxBase:Update()
         TagPos = cf * ESP.BoxShift * CFrame.new(0,size.Y/2,0),
         Torso = cf * ESP.BoxShift
     }
+    if not isSWM then
+        if ESP.Boxes then
+            local TopLeft, Vis1 = WorldToViewportPoint(cam, locs.TopLeft.p)
+            local TopRight, Vis2 = WorldToViewportPoint(cam, locs.TopRight.p)
+            local BottomLeft, Vis3 = WorldToViewportPoint(cam, locs.BottomLeft.p)
+            local BottomRight, Vis4 = WorldToViewportPoint(cam, locs.BottomRight.p)
 
-    if ESP.Boxes then
-        local TopLeft, Vis1 = WorldToViewportPoint(cam, locs.TopLeft.p)
-        local TopRight, Vis2 = WorldToViewportPoint(cam, locs.TopRight.p)
-        local BottomLeft, Vis3 = WorldToViewportPoint(cam, locs.BottomLeft.p)
-        local BottomRight, Vis4 = WorldToViewportPoint(cam, locs.BottomRight.p)
-
-        if self.Components.Quad then
-            if Vis1 or Vis2 or Vis3 or Vis4 then
-                self.Components.Quad.Visible = true
-                self.Components.Quad.PointA = Vector2.new(TopRight.X, TopRight.Y)
-                self.Components.Quad.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
-                self.Components.Quad.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
-                self.Components.Quad.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
-                self.Components.Quad.Color = color
-            else
-                self.Components.Quad.Visible = false
+            if self.Components.Quad then
+                if Vis1 or Vis2 or Vis3 or Vis4 then
+                    self.Components.Quad.Visible = true
+                    self.Components.Quad.PointA = Vector2.new(TopRight.X, TopRight.Y)
+                    self.Components.Quad.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
+                    self.Components.Quad.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
+                    self.Components.Quad.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
+                    self.Components.Quad.Color = color
+                else
+                    self.Components.Quad.Visible = false
+                end
             end
+        else
+            self.Components.Quad.Visible = false
         end
-    else
-        self.Components.Quad.Visible = false
     end
 
     if ESP.Names then
@@ -565,6 +835,7 @@ end
 
 function ESP:Add(obj, options)
     if not obj.Parent and not options.RenderInNil then
+        task.wait(1)
         return warn(obj, "has no parent")
     end
 
@@ -586,14 +857,18 @@ function ESP:Add(obj, options)
     if self:GetBox(obj) then
         self:GetBox(obj):Remove()
     end
+    
+    if not isSWM then
+        box.Components["Quad"] = Draw("Quad", {
+            Thickness = self.Thickness,
+            Color = color,
+            Transparency = 1,
+            Filled = false,
+            Visible = self.Enabled and self.Boxes
+        })
+    end
+    
 
-    box.Components["Quad"] = Draw("Quad", {
-        Thickness = self.Thickness,
-        Color = color,
-        Transparency = 1,
-        Filled = false,
-        Visible = self.Enabled and self.Boxes
-    })
     box.Components["Name"] = Draw("Text", {
 		Text = box.Name,
 		Color = box.Color,
@@ -685,6 +960,20 @@ game:GetService("RunService").RenderStepped:Connect(function()
         end
     end
 end)
+
+print(isSWM)
+
+print(isSWM)
+print(isSWM)
+print(isSWM)
+print(isSWM)
+print(isSWM)
+print(isSWM)
+print(isSWM)
+print(isSWM)
+print(isSWM)
+print(isSWM)
+
 
 return ESP
 end)
@@ -814,51 +1103,361 @@ end)
 __bundle_register("games/Jailbreak/ui/PlayerTab", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Player = require("modules/exploit/Player")
 local Modules = require("games/Jailbreak/managers/ModuleManager")
+local Maid = require("modules/util/Maid")
+
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local flyingMaid = Maid.new()
+
+local isFlying = false
 
 local localPlayer = Player:GetLocalPlayer() ---@type Player
 local character = Player:GetChar() ---@type Model
 local humanoid = character:FindFirstChild("Humanoid") or character:WaitForChild("Humanoid", 3) ---@type Humanoid
+local camera = game:GetService("Workspace").CurrentCamera
 
-local function playerTab(PlayerTab)
+local PlayerUtils = Modules.PlayerUtils
+local CircleSpecs = Modules.UI.CircleAction.Specs
+
+local oldSpecs = {}
+
+for _, v in pairs(CircleSpecs) do
+    if not oldSpecs[v] then
+        oldSpecs[v] = v
+    end
+end
+
+local oldPointInTag = PlayerUtils.isPointInTag;
+PlayerUtils.isPointInTag = function(point, tag)
+    if tag == "NoRagdoll" then
+        return Toggles.AntiRagdoll.Value;
+    end
+
+    if tag == "NoFallDamage" then
+        return Toggles.AntiFallDamage.Value
+    end
+
+    if tag == "NoParachute" then
+        return Toggles.AntiSkydive.Value
+    end
+
+    return oldPointInTag(point, tag);
+end
+
+local function flyingOnRenderStepped()
+    local root = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+    if root and not humanoid.PlatformStand and not humanoid.Sit then
+        local flyingVector = Vector3.new()
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            flyingVector = flyingVector + camera.CFrame.LookVector
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            flyingVector = flyingVector - camera.CFrame.RightVector
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            flyingVector = flyingVector - camera.CFrame.LookVector
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            flyingVector = flyingVector + camera.CFrame.RightVector
+        end
+
+        flyingVector = flyingVector == Vector3.new() and Vector3.new(0, 9e-10, 0) or flyingVector
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) and not UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+           flyingVector = flyingVector + Vector3.new(0, 1, 0)
+        elseif flykeys.LeftShift and not flykeys.Space then
+           flyingVector = flyingVector + Vector3.new(0, -1, 0)
+        end
+
+        root.Velocity = flyingVector.Unit * Options.FlySpeed and Options.FlySpeedAmount.Value or 100
+        root.Anchored = flyingVector == Vector3.new(0, 9e-10, 0)
+    end
+end
+
+local function playerTab(PlayerTab, Library)
     local MovementGroupBox = PlayerTab:AddLeftGroupbox("Movement")
     do
         MovementGroupBox:AddToggle("WalkSpeedToggle", { Text = "WalkSpeed" })
-        MovementGroupBox:AddSlider("WalkSpeedAmount", { Text = "WalkSpeed Amount", Rounding = 0, Min = 16, Max = 200, Default = 100 })
+        MovementGroupBox:AddSlider("WalkSpeedAmount", { Text = "WalkSpeed Amount", Rounding = 0, Min = 16, Max = 200, Default = 60 })
+        MovementGroupBox:AddToggle("JumpPowerToggle", { Text = "JumpPower" })
+        MovementGroupBox:AddSlider("JumpPowerAmount", { Text = "JumpPower Amount", Rounding = 0, Min = 50, Max = 300, Default = 100 })
+        MovementGroupBox:AddToggle("FlyToggle", { Text = "Fly" })
+        MovementGroupBox:AddSlider("FlySpeedAmount", { Text = "Fly Speed Amount", Rounding = 0, Min = 25, Max = 300, Default = 125 })
     end
 
-    -- // Non UI Stuff
+    local CharacterGroupBox = PlayerTab:AddRightGroupbox("Character")
+    do
+        CharacterGroupBox:AddToggle("AntiRagdoll", { Text = "Anti Ragdoll" })
+        CharacterGroupBox:AddToggle("AntiFallDamage", { Text = "Anti Fall Damage" })
+        CharacterGroupBox:AddToggle("AntiSkydive", { Text = "Anti Skydive" })
+        CharacterGroupBox:AddToggle("NoPunchCooldown", { Text = "No Punch Cooldown" })
+        CharacterGroupBox:AddToggle("SpoofKeycardDoors", { Text = "Spoof Keycard Doors", Tooltip = "Keycard Doors will open for you without a keycard with this on" })
+        CharacterGroupBox:AddToggle("NoPromptWait", { Text = "No Prompt Duration", Tooltip = "Hold E Prompts will be instant when this is on" })
+    end
+
+    -- // Non UI Stuff // --
+
+    -- // Character Stuff
+    Toggles.NoPromptWait:OnChanged(function()
+        local state = Toggles.NoPromptWait.Value
+        if state then
+            for _, v in pairs(CircleSpecs) do
+                if not oldSpecs[v] then
+                    oldSpecs[v] = v
+                end
+                v.Duration = 0
+            end
+        else
+            for _, v in pairs(CircleSpecs) do
+                v.Duration = oldSpecs[v].Duration or 0
+            end
+        end
+    end)
+
+    Toggles.SpoofKeycardDoors:OnChanged(function()
+        local teamValue = game:GetService("Players").LocalPlayer:FindFirstChild("TeamValue")
+        if teamValue and (teamValue == "Prisoner" or teamValue == "Criminal") then
+            teamValue.Value = "Police"
+        end
+    end)
+
+    Toggles.NoPunchCooldown:OnChanged(function()
+        local script = localPlayer.PlayerScripts:FindFirstChild("LocalScript")
+
+        if Toggles.NoPunchCooldown.Value then
+            if not script then
+                Library:Notify("Couldn't find the LocalScript")
+            end
+            getsenv(script).tick = function() return 0/0 end
+        else
+            getsenv(script).tick = tick
+        end
+    end)
+
+
+    -- // Walkspeed + JumpPower
+    humanoid.UseJumpPower = true
+
+    Toggles.FlyToggle:OnChanged(function()
+        if Toggles.FlyToggle.Value then
+            flyingMaid:GiveTask(RunService.RenderStepped:Connect(flyingOnRenderStepped))
+        else
+            flyingMaid:DoCleaning()
+        end
+    end)
+
+    Toggles.JumpPowerToggle:OnChanged(function()
+        pcall(function()
+            if Toggles.JumpPowerToggle.Value and humanoid then
+                humanoid.JumpPower = Options.JumpPowerAmount.Value
+            else
+                if humanoid then
+                    humanoid.JumpPower = 16
+                end
+            end
+        end)
+    end)
+
+    Options.JumpPowerAmount:OnChanged(function()
+        pcall(function()
+            if Toggles.JumpPowerToggle.Value and humanoid then
+                humanoid.JumpPower = Options.WalkSpeedAmount.Value
+            end
+        end)
+    end)
+
     Toggles.WalkSpeedToggle:OnChanged(function()
-        humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
+
+        pcall(function()
+            if Toggles.WalkSpeedToggle.Value and humanoid  then
+                humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
+            else
+                if humanoid then
+                    humanoid.WalkSpeed = 16
+                end
+            end
+        end)
+    end)
+
+    Options.WalkSpeedAmount:OnChanged(function()
+        pcall(function()
+            if Toggles.WalkSpeedToggle.Value and humanoid  then
+                humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
+            end
+        end)
     end)
 
     humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-        if Toggles.WalkSpeedToggle.Value then
+        if Toggles.WalkSpeedToggle.Value and humanoid  then
             humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
         end
+    end)
+
+    humanoid:GetPropertyChangedSignal("JumpPower"):Connect(function()
+        if Toggles.JumpPowerToggle.Value and humanoid then
+            humanoid.JumpPower = Options.JumpPowerAmount.Value
+        end
+    end)
+
+    localPlayer.CharacterAdded:Connect(function(char)
+        if Toggles.JumpPowerToggle.Value then
+            humanoid.JumpPower = Options.JumpPowerAmount.Value
+        end
+
+        if Toggles.WalkSpeedToggle.Value then
+            humanoid.WalkSpeed = Options.WalkSpeedToggle.Value
+        end
+
+        humanoid = char.Humanoid
     end)
 end
 
 return playerTab
 end)
-__bundle_register("modules/exploit/Player", function(require, _LOADED, __bundle_register, __bundle_modules)
-local Players = game:GetService("Players")
+__bundle_register("modules/util/Maid", function(require, _LOADED, __bundle_register, __bundle_modules)
+--[[
+    Made by Quenty
+    Source: https://github.com/Quenty/NevermoreEngine/blob/version2/Modules/Shared/Events/Maid.lua.
+--]]
 
-local localPlayer = Players.LocalPlayer
+---	Manages the cleaning of events and other things.
+-- Useful for encapsulating state and make deconstructors easy
+-- @classmod Maid
+-- @see Signal
 
-local Player = {}
+local Maid = {}
+Maid.ClassName = "Maid"
 
-function Player:GetLocalPlayer()
-    return localPlayer
+--- Returns a new Maid object
+-- @constructor Maid.new()
+-- @treturn Maid
+function Maid.new()
+	return setmetatable({
+		_tasks = {}
+	}, Maid)
 end
 
-function Player:GetChar()
-    return localPlayer.Character
+function Maid.isMaid(value)
+	return type(value) == "table" and value.ClassName == "Maid"
 end
 
-return Player
-end)
-__bundle_register("games/Jailbreak/managers/HashesManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+--- Returns Maid[key] if not part of Maid metatable
+-- @return Maid[key] value
+function Maid:__index(index)
+	if Maid[index] then
+		return Maid[index]
+	else
+		return self._tasks[index]
+	end
+end
 
+--- Add a task to clean up. Tasks given to a maid will be cleaned when
+--  maid[index] is set to a different value.
+-- @usage
+-- Maid[key] = (function)         Adds a task to perform
+-- Maid[key] = (event connection) Manages an event connection
+-- Maid[key] = (Maid)             Maids can act as an event connection, allowing a Maid to have other maids to clean up.
+-- Maid[key] = (Object)           Maids can cleanup objects with a `Destroy` method
+-- Maid[key] = nil                Removes a named task. If the task is an event, it is disconnected. If it is an object,
+--                                it is destroyed.
+function Maid:__newindex(index, newTask)
+	if Maid[index] ~= nil then
+		error(("'%s' is reserved"):format(tostring(index)), 2)
+	end
+
+	local tasks = self._tasks
+	local oldTask = tasks[index]
+
+	if oldTask == newTask then
+		return
+	end
+
+	tasks[index] = newTask
+
+	if oldTask then
+		if type(oldTask) == "function" then
+			oldTask()
+		elseif typeof(oldTask) == "RBXScriptConnection" then
+			oldTask:Disconnect()
+		elseif oldTask.Destroy then
+			oldTask:Destroy()
+		end
+	end
+end
+
+--- Same as indexing, but uses an incremented number as a key.
+-- @param task An item to clean
+-- @treturn number taskId
+function Maid:GiveTask(task)
+	if not task then
+		error("Task cannot be false or nil", 2)
+	end
+
+	local taskId = #self._tasks+1
+	self[taskId] = task
+
+	if type(task) == "table" and (not task.Destroy) then
+		warn("[Maid.GiveTask] - Gave table task without .Destroy\n\n" .. debug.traceback())
+	end
+
+	return taskId
+end
+
+function Maid:GivePromise(promise)
+	if not promise:IsPending() then
+		return promise
+	end
+
+	local newPromise = promise.resolved(promise)
+	local id = self:GiveTask(newPromise)
+
+	-- Ensure GC
+	newPromise:Finally(function()
+		self[id] = nil
+	end)
+
+	return newPromise
+end
+
+--- Cleans up all tasks.
+-- @alias Destroy
+function Maid:DoCleaning()
+	local tasks = self._tasks
+
+	-- Disconnect all events first as we know this is safe
+	for index, task in pairs(tasks) do
+		if typeof(task) == "RBXScriptConnection" then
+			tasks[index] = nil
+			task:Disconnect()
+		end
+	end
+
+	-- Clear out tasks table completely, even if clean up tasks add more tasks to the maid
+	local index, task = next(tasks)
+	while task ~= nil do
+		tasks[index] = nil
+		if type(task) == "function" then
+			task()
+		elseif typeof(task) == "RBXScriptConnection" then
+			task:Disconnect()
+		elseif task.Destroy then
+			task:Destroy()
+		end
+		index, task = next(tasks)
+	end
+end
+
+--- Alias for DoCleaning()
+-- @function Destroy
+Maid.Destroy = Maid.DoCleaning
+
+return Maid
 end)
 __bundle_register("games/Jailbreak/managers/CacheManager", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Players = game:GetService("Players")
@@ -883,10 +1482,6 @@ for _, v in pairs(getgc()) do
                 CacheManager.Functions.Events = debug.getupvalue(debug.getupvalue(v, 1), 2)
             elseif table.find(constants, "FailedPcall") then
                 debug.setupvalue(v, 2, true)
-            elseif table.find(constants, "ExplodeWall") then
-                CacheManager.Functions.ExplodeWall = v
-            elseif table.find(constants, "VehicleHornId") then
-                CacheManager.Functions.Horn = v
             end
         end
         if getfenv(v).script == game:GetService("ReplicatedStorage").Game.NukeControl then
@@ -1599,144 +2194,5 @@ return TableUtil
 end)
 __bundle_register("modules/util/Signals", function(require, _LOADED, __bundle_register, __bundle_modules)
 return loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/Signal/main/Manager.lua"))()
-end)
-__bundle_register("modules/util/Maid", function(require, _LOADED, __bundle_register, __bundle_modules)
---[[
-    Made by Quenty
-    Source: https://github.com/Quenty/NevermoreEngine/blob/version2/Modules/Shared/Events/Maid.lua.
---]]
-
----	Manages the cleaning of events and other things.
--- Useful for encapsulating state and make deconstructors easy
--- @classmod Maid
--- @see Signal
-
-local Maid = {}
-Maid.ClassName = "Maid"
-
---- Returns a new Maid object
--- @constructor Maid.new()
--- @treturn Maid
-function Maid.new()
-	return setmetatable({
-		_tasks = {}
-	}, Maid)
-end
-
-function Maid.isMaid(value)
-	return type(value) == "table" and value.ClassName == "Maid"
-end
-
---- Returns Maid[key] if not part of Maid metatable
--- @return Maid[key] value
-function Maid:__index(index)
-	if Maid[index] then
-		return Maid[index]
-	else
-		return self._tasks[index]
-	end
-end
-
---- Add a task to clean up. Tasks given to a maid will be cleaned when
---  maid[index] is set to a different value.
--- @usage
--- Maid[key] = (function)         Adds a task to perform
--- Maid[key] = (event connection) Manages an event connection
--- Maid[key] = (Maid)             Maids can act as an event connection, allowing a Maid to have other maids to clean up.
--- Maid[key] = (Object)           Maids can cleanup objects with a `Destroy` method
--- Maid[key] = nil                Removes a named task. If the task is an event, it is disconnected. If it is an object,
---                                it is destroyed.
-function Maid:__newindex(index, newTask)
-	if Maid[index] ~= nil then
-		error(("'%s' is reserved"):format(tostring(index)), 2)
-	end
-
-	local tasks = self._tasks
-	local oldTask = tasks[index]
-
-	if oldTask == newTask then
-		return
-	end
-
-	tasks[index] = newTask
-
-	if oldTask then
-		if type(oldTask) == "function" then
-			oldTask()
-		elseif typeof(oldTask) == "RBXScriptConnection" then
-			oldTask:Disconnect()
-		elseif oldTask.Destroy then
-			oldTask:Destroy()
-		end
-	end
-end
-
---- Same as indexing, but uses an incremented number as a key.
--- @param task An item to clean
--- @treturn number taskId
-function Maid:GiveTask(task)
-	if not task then
-		error("Task cannot be false or nil", 2)
-	end
-
-	local taskId = #self._tasks+1
-	self[taskId] = task
-
-	if type(task) == "table" and (not task.Destroy) then
-		warn("[Maid.GiveTask] - Gave table task without .Destroy\n\n" .. debug.traceback())
-	end
-
-	return taskId
-end
-
-function Maid:GivePromise(promise)
-	if not promise:IsPending() then
-		return promise
-	end
-
-	local newPromise = promise.resolved(promise)
-	local id = self:GiveTask(newPromise)
-
-	-- Ensure GC
-	newPromise:Finally(function()
-		self[id] = nil
-	end)
-
-	return newPromise
-end
-
---- Cleans up all tasks.
--- @alias Destroy
-function Maid:DoCleaning()
-	local tasks = self._tasks
-
-	-- Disconnect all events first as we know this is safe
-	for index, task in pairs(tasks) do
-		if typeof(task) == "RBXScriptConnection" then
-			tasks[index] = nil
-			task:Disconnect()
-		end
-	end
-
-	-- Clear out tasks table completely, even if clean up tasks add more tasks to the maid
-	local index, task = next(tasks)
-	while task ~= nil do
-		tasks[index] = nil
-		if type(task) == "function" then
-			task()
-		elseif typeof(task) == "RBXScriptConnection" then
-			task:Disconnect()
-		elseif task.Destroy then
-			task:Destroy()
-		end
-		index, task = next(tasks)
-	end
-end
-
---- Alias for DoCleaning()
--- @function Destroy
-Maid.Destroy = Maid.DoCleaning
-
-return Maid
 end)
 return __bundle_require("__root")

@@ -20,10 +20,6 @@ for _, v in pairs(getgc()) do
                 CacheManager.Functions.Events = debug.getupvalue(debug.getupvalue(v, 1), 2)
             elseif table.find(constants, "FailedPcall") then
                 debug.setupvalue(v, 2, true)
-            elseif table.find(constants, "ExplodeWall") then
-                CacheManager.Functions.ExplodeWall = v
-            elseif table.find(constants, "VehicleHornId") then
-                CacheManager.Functions.Horn = v
             end
         end
         if getfenv(v).script == game:GetService("ReplicatedStorage").Game.NukeControl then
