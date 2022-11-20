@@ -12,7 +12,6 @@ local JailbreakUtil = require("games/Jailbreak/JailbreakUtil")
 JailbreakUtil:Notify("Loading...", 1)
 
 -- // Simple AC Bypasses
-
 local oldIndex
 oldIndex = hookmetamethod(game, "__index", function(self, index)
     if self == humanoid and tostring(index) == "WalkSpeed" and not checkcaller() then
@@ -26,8 +25,17 @@ end)
 
 -- // End Simple AC Bypasses
 
-local CacheManager = require("games/Jailbreak/managers/CacheManager")
-local KeysManager = require("games/Jailbreak/managers/KeysManager")
+-- // Cache these managers in getgenv() to reduce load time
+local CacheManager = getgenv().JailbreakCacheManager ~= nil and getgenv().JailbreakCacheManager or require("games/Jailbreak/managers/CacheManager")
+local KeysManager =  getgenv().JailbreakKeysManager ~= nil and getgenv().JailbreakKeysManager or require("games/Jailbreak/managers/KeysManager")
+
+if not getgenv().JailbreakCacheManager then
+    getgenv().JailbreakCacheManager = require("games/Jailbreak/managers/CacheManager")
+end
+
+if not getgenv().JailbreakKeysManager then
+    getgenv().JailbreakKeysManager = require("games/Jailbreak/managers/KeysManager")
+end
 
 getgenv().usingLargerUI = true
 
@@ -47,6 +55,7 @@ require("games/Jailbreak/ui/PlayerTab")(Tabs.Player, Library, Window)
 require("games/Jailbreak/ui/VisualsTab")(Tabs.Visuals, Library, Window)
 require("games/Jailbreak/ui/FarmingTab")(Tabs.Farming, Library, Window)
 require("games/Jailbreak/ui/CombatTab")(Tabs.Combat, Library, Window)
+require("games/Jailbreak/ui/TeleportsTab")(Tabs.Teleports, Library, Window)
 
 local SettingsTab = Linoria:initManagers(Library, Window)
 

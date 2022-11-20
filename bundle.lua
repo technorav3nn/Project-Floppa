@@ -69,7 +69,6 @@ local JailbreakUtil = require("games/Jailbreak/JailbreakUtil")
 JailbreakUtil:Notify("Loading...", 1)
 
 -- // Simple AC Bypasses
-
 local oldIndex
 oldIndex = hookmetamethod(game, "__index", function(self, index)
     if self == humanoid and tostring(index) == "WalkSpeed" and not checkcaller() then
@@ -83,8 +82,17 @@ end)
 
 -- // End Simple AC Bypasses
 
-local CacheManager = require("games/Jailbreak/managers/CacheManager")
-local KeysManager = require("games/Jailbreak/managers/KeysManager")
+-- // Cache these managers in getgenv() to reduce load time
+local CacheManager = getgenv().JailbreakCacheManager ~= nil and getgenv().JailbreakCacheManager or require("games/Jailbreak/managers/CacheManager")
+local KeysManager =  getgenv().JailbreakKeysManager ~= nil and getgenv().JailbreakKeysManager or require("games/Jailbreak/managers/KeysManager")
+
+if not getgenv().JailbreakCacheManager then
+    getgenv().JailbreakCacheManager = require("games/Jailbreak/managers/CacheManager")
+end
+
+if not getgenv().JailbreakKeysManager then
+    getgenv().JailbreakKeysManager = require("games/Jailbreak/managers/KeysManager")
+end
 
 getgenv().usingLargerUI = true
 
@@ -104,6 +112,7 @@ require("games/Jailbreak/ui/PlayerTab")(Tabs.Player, Library, Window)
 require("games/Jailbreak/ui/VisualsTab")(Tabs.Visuals, Library, Window)
 require("games/Jailbreak/ui/FarmingTab")(Tabs.Farming, Library, Window)
 require("games/Jailbreak/ui/CombatTab")(Tabs.Combat, Library, Window)
+require("games/Jailbreak/ui/TeleportsTab")(Tabs.Teleports, Library, Window)
 
 local SettingsTab = Linoria:initManagers(Library, Window)
 
@@ -121,39 +130,197 @@ JailbreakUtil:Notify("Project Floppa has loaded!", 3)
 
 getgenv().usingLargerUI = false
 end)
+__bundle_register("games/Jailbreak/ui/TeleportsTab", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Teleporter = require("modules/exploit/Teleporter")
+local teleport = require("games/Jailbreak/TeleportBypass")
+
+local RobberyTeleporter = Teleporter.new({
+    Teleports = {
+        ["Jewelry In"] = CFrame.new(133, 17, 1316),
+        ["Jewelry Out"] = CFrame.new(156, 18, 1353),
+        ["Bank In"] = CFrame.new(24, 19, 853),
+        ["Bank Out"] = CFrame.new(11, 17, 788),
+        ["Museum In"] = CFrame.new(1071, 102, 1191),
+        ["Museum Out"] = CFrame.new(1103, 138, 1246),
+        ["Power Plant"] = CFrame.new(691, 37, 2362),
+        ["Cargo Plane Spawn"] = CFrame.new(-1227, 64, 2787),
+        ["Gas Station"] = CFrame.new(-1596, 18, 710),
+        ["Donut Store"] = CFrame.new(270.763885, 18.4229183, -1762.90149),
+        ["Casino"] = CFrame.new(-227.88002014160156, 22.14699363708496, -4659.5556640625)
+    },
+    TeleportFn = teleport
+})
+
+local LocationTeleporter = Teleporter.new({
+    Teleports = {
+        ["Airport"] = CFrame.new(0, 0, 0),
+        Prison = CFrame.new(0, 0, 0),
+        ["Police HQ"] = CFrame.new(0, 0, 0),
+        ["City Police Station"] = CFrame.new(0, 0, 0),
+        ["Prison Police Station"] = CFrame.new(0, 0, 0),
+        ["Military Base"] = CFrame.new(846.1241455078125, 19.318744659423828, -3621.896240234375),
+        ["Cargo Port"] = CFrame.new(0, 0, 0),
+        ["Crater City" ]= CFrame.new(-530.5619506835938, 19.598960876464844, -5669.6943359375),
+        ["Fire Station"] = CFrame.new(0, 0, 0),
+        ["Trade Port"] = CFrame.new(2386.97314453125, 24.2812442779541, -3881.135009765625),
+        ["Jetpack Spawn"] = CFrame.new(-643.7464599609375, 220.8810577392578, -6010.41357421875),
+        ["Crater City Airport"] = CFrame.new(-738.9046020507812, 22.281513214111328, -4917.40185546875),
+        ["Crater City Gunshop"] = CFrame.new(-530.5619506835938, 19.598960876464844, -5669.6943359375)
+    },
+    TeleportFn = teleport
+})
+
+local vehicleTps = {}
+
+local VehicleTeleporter = Teleporter.new({
+    Teleports = vehicleTps,
+    TeleportFn = teleport
+})
+
+local RobberyTeleportKeys = RobberyTeleporter:GetTeleportKeys()
+local LocationTeleportKeys = LocationTeleporter:GetTeleportKeys()
+local VehicleTeleportKeys = VehicleTeleporter:GetTeleportKeys()
+
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(character)
+    task.wait(0.4)
+    RobberyTeleporter.TeleportFn = loadstring(game:HttpGet("https://raw.githubusercontent.com/Introvert1337/RobloxReleases/main/Scripts/Jailbreak/Teleporation.lua"))()
+    LocationTeleporter.TeleportFn = loadstring(game:HttpGet("https://raw.githubusercontent.com/Introvert1337/RobloxReleases/main/Scripts/Jailbreak/Teleporation.lua"))()
+    VehicleTeleporter.TeleportFn = loadstring(game:HttpGet("https://raw.githubusercontent.com/Introvert1337/RobloxReleases/main/Scripts/Jailbreak/Teleporation.lua"))()
+end)
+
+local function farmingTab(PlayerTab)
+    local LocationTeleportsGroupBox = PlayerTab:AddLeftGroupbox("Location Teleports")
+    do
+        LocationTeleportsGroupBox:AddDropdown("LocationTeleportSelected", {
+            Values = LocationTeleportKeys,
+            Text = "Location Teleport",
+            Default = LocationTeleportKeys[1],
+            Compact = true
+        })
+        LocationTeleportsGroupBox:AddButton("Teleport to Location", function()
+            LocationTeleporter:TeleportTo(Options.LocationTeleportSelected.Value)
+        end)
+    end
+
+    local RobberyTeleportsGroupBox = PlayerTab:AddRightGroupbox("Robbery Teleports")
+    do
+        RobberyTeleportsGroupBox:AddDropdown("RobberyTeleportSelected", {
+            Values = RobberyTeleportKeys,
+            Text = "Robbery Teleport",
+            Default = RobberyTeleportKeys[1],
+            Compact = true
+        })
+        RobberyTeleportsGroupBox:AddButton("Teleport to Robbery", function()
+            RobberyTeleporter:TeleportTo(Options.RobberyTeleportSelected.Value)
+        end)
+    end
+    
+    local VehicleTeleportsGroupBox = PlayerTab:AddLeftGroupbox("Vehicle Teleports")
+    do
+        VehicleTeleportsGroupBox:AddDropdown("VehicleTeleportSelected", {
+            Values = VehicleTeleportKeys,
+            Text = "Vehicle Teleport",
+            Default = VehicleTeleportKeys[1],
+            Compact = true
+        })
+        VehicleTeleportsGroupBox:AddButton("Teleport to Vehicle", function()
+            VehicleTeleporter:TeleportTo(Options.VehicleTeleportSelected.Value)
+        end)
+    end
+end
+
+return farmingTab
+end)
+__bundle_register("games/Jailbreak/TeleportBypass", function(require, _LOADED, __bundle_register, __bundle_modules)
+-- // huge credits to Introvert1337
+
+return loadstring(game:HttpGet("https://raw.githubusercontent.com/Introvert1337/RobloxReleases/main/Scripts/Jailbreak/Teleporation.lua"))()
+end)
+__bundle_register("modules/exploit/Teleporter", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+local Teleporter = {}
+Teleporter.__index = Teleporter
+
+-- // teleport example:
+--[[
+    local Teleports = {
+        Bank = CFrame.new(244, 543, 231)
+        Jewel = CFrame.new(0, 0, 0)
+    }
+
+    local Teleporter = TeleportModule.new({
+        Teleports = Teleports,
+        TeleportFn = myCustomTeleportFunction
+    })
+
+    Teleporter:TeleportTo("Bank")
+]]
+
+function Teleporter.new(teleporterOptions)
+    assert(teleporterOptions.Teleports ~= nil, "must have Teleports in teleporterOptions!")
+
+    local self = setmetatable({}, Teleporter)
+
+    self.Teleports = teleporterOptions.Teleports
+    self.TeleportFn = teleporterOptions.TeleportFn or function (teleportName)
+        local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+        character:FindFirstChild("HumanoidRootPart").CFrame = self.teleports[teleportName]
+
+        if not success and error then
+            return error(error)
+        end
+    end
+
+    return self
+end
+
+function Teleporter:GetTeleportKeys()
+    local keys = {}
+
+    for k, _ in pairs(self.Teleports) do
+        table.insert(keys, k)
+    end
+
+    return keys
+end
+
+function Teleporter:TeleportTo(teleportName)
+    assert(self.Teleports[teleportName] ~= nil, "teleportName doesnt exist in Teleports!")
+    assert(typeof(self.Teleports[teleportName]) == "CFrame", "self.Teleports[teleportName] (" .. teleportName .. ") must be a CFrame value!")
+
+    local teleportFunction = self.TeleportFn
+    local success, err = pcall(teleportFunction, self.Teleports[teleportName])
+
+    if not success then
+        warn(err)
+    end
+
+    return success
+end
+
+return Teleporter
+end)
 __bundle_register("games/Jailbreak/ui/CombatTab", function(require, _LOADED, __bundle_register, __bundle_modules)
-local KeysManager = require("games/Jailbreak/managers/KeysManager")
+local KeysManager = getgenv().JailbreakKeysManager
+local TableUtil = require("modules/util/TableUtil")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Gun = require(ReplicatedStorage.Game.Item.Gun)
-
 local Network = KeysManager.Network
 local Keys = KeysManager.Keys
+
+local ItemConfig = ReplicatedStorage.Game.ItemConfig
 
 local allGuns = require(ReplicatedStorage.Game.GunShop.Data.Held)
 local allItems = require(ReplicatedStorage.Game.GunShop.Data.Boost)
 local allAmmo = require(ReplicatedStorage.Game.GunShop.Data.Projectile)
 
-local trollSniper = {
-    __ClassName = "Sniper",
-    LastImpactSound = 1,
-    Maid = require(ReplicatedStorage.Module.Maid),
-    LastImpact = 1,
-    Local = true,
-    Config = {},
-    IgnoreList = {},
-}
-
-Gun.SetupBulletEmitter(trollSniper)
-
-trollSniper.OnHitSurface:Connect(function()
-    print("sniper hit surface unknown if car or heli")
-end)
-
 local guns = {}
 local items = {}
 local ammoTypes = {}
+local oldGunStates = {}
 
 for _, gunTable in pairs(allGuns) do
     table.insert(guns, gunTable.Name)
@@ -166,6 +333,23 @@ end
 for _, ammoTable in pairs(allAmmo) do
     if string.find(ammoTable.Name, "Cartridge") or string.find(ammoTable.Name, "Ammo") then
         table.insert(ammoTypes, ammoTable.Name)
+    end
+end
+
+for _, v in pairs(ItemConfig:GetChildren()) do
+    local module = require(v)
+    oldGunStates[v.Name] = TableUtil:deepCopy(module)
+end
+
+local function modGun(state, prop, newValue)
+    for _, v in pairs(ItemConfig:GetChildren()) do
+        local module = require(v)
+        print(oldGunStates[v.Name][prop], "is old gun states; cur mod is ", module[prop])
+        if state then
+            module[prop] = newValue
+        else
+            module[prop] = oldGunStates[v.Name][prop]
+        end
     end
 end
 
@@ -224,81 +408,71 @@ local function combatTab(CombatTab)
             Network:FireServer(Keys.BuyGunOrAmmo, Options.ItemSelected.Value)
         end)
     end
+
+    local GunModGroupBox = CombatTab:AddLeftGroupbox("Gun Mods")
+    do
+        GunModGroupBox:AddToggle("InfAmmo", { Text = "Infinite Ammo" }):OnChanged(function()
+            modGun(Toggles.InfAmmo.Value, "MagSize", math.huge)
+        end)
+        GunModGroupBox:AddToggle("NoRecoil", { Text = "No Recoil" }):OnChanged(function()
+            modGun(Toggles.NoRecoil.Value, "CamShakeMagnitude", 0)
+        end)
+        
+        GunModGroupBox:AddToggle("Automatic", { Text = "Automatic Firing" }):OnChanged(function()
+            modGun(Toggles.Automatic.Value, "FireAuto", true)
+        end)
+        GunModGroupBox:AddToggle("NoReloadTime", { Text = "NoReloadTime" }):OnChanged(function()
+            modGun(Toggles.NoReloadTime.Value, "ReloadTime", 0.01)
+        end)
+        GunModGroupBox:AddToggle("FireRate", { Text = "Custom Fire Rate" })
+        AmmoGroupBox:AddSlider("FireRateAmount", {
+            Rounding = 0,
+            Text = "Fire Rate",
+            Max = 150,
+            Min = 1,
+            Default = 3,
+            Compact = true
+        }):OnChanged(function()
+            modGun(Toggles.FireRate.Value, "FireFreq", Options.FireRateAmount.Value)
+        end)
+    end
+    local ThrowableModGroupBox = CombatTab:AddRightGroupbox("Throwable Mods")
+    do
+        
+    end
 end
 
 return combatTab
 end)
-__bundle_register("games/Jailbreak/managers/KeysManager", function(require, _LOADED, __bundle_register, __bundle_modules)
-local ModuleManager = require("games/Jailbreak/managers/ModuleManager")
+__bundle_register("modules/util/TableUtil", function(require, _LOADED, __bundle_register, __bundle_modules)
+local TableUtil = {}
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- // Credits to Introvert1337
-local Keys, Network = loadstring(game:HttpGet("https://gist.githubusercontent.com/technorav3nn/9fe09be7c97ed916a1afdccd9150d64e/raw/74ce5f2b7985d8ecbf3ee75163de83630c6069ed/key_fetcher_fixed.lua"))()
-local KeysList = debug.getupvalue(debug.getupvalue(Network.FireServer, 1), 3)
-
-local displayList = ModuleManager.GunShopUI.displayList
-
-local KeysManager = {}
-
--- // Credits to Introvert1337
-function KeysManager:FetchKey(fn, keyIdx)
-    local constants = debug.getconstants(fn);
-
-    for index, constant in next, constants do
-        if KeysList[constant] then -- if the constants already contain the raw key
-            return constant;
-        elseif type(constant) ~= "string" or constant == "" or #constant > 7 or constant:lower() ~= constant then
-            constants[index] = nil; -- remove constants that are 100% not the ones we need to make it a bit faster
-        end;
-    end;
-
-    local keys = {}
-
-    for key, _ in next, KeysList do
-        local prefix_passed = false;
-        local key_length = #key;
-        local keyNumber = 1
-
-        for _, constant in next, constants do
-            local constant_length = #constant;
-
-            if not prefix_passed and key:sub(1, constant_length) == constant then -- check if the key starts with one of the constants
-                prefix_passed = constant;
-            elseif prefix_passed and constant ~= prefix_passed and key:sub(key_length - (constant_length - 1), key_length) == constant then -- check if the key ends with one of the constants
-                table.insert(keys, key)
-            end;
-        end;
-    end;
-
-    return keys[keyIdx]
+function TableUtil:map(tbl, fn, ...)
+    local t = {}
+    for _, element in ipairs(tbl) do
+        local _, result = pcall(fn, element, ...)
+        table.insert(t, result)
+    end
+    return t
 end
 
--- // I didnt loop through the keys and add them since it would be hard to tell which keys were in there
-KeysManager.Keys = {
-    GrabGun = KeysManager:FetchKey(debug.getproto(displayList, 1), 3),
-    BuyGunOrAmmo = KeysManager:FetchKey(debug.getproto(displayList, 1), 1),
-    Arrest = Keys.Arrest,
-    RedeemCode = Keys.RedeemCode
-}
+-- // http://lua-users.org/wiki/CopyTable
+function TableUtil:deepCopy(orig)
+    local origType = type(orig)
+    local copy
+    if origType == 'table' then
+        copy = {}
+        for origKey, origValue in next, orig, nil do
+            copy[self:deepCopy(origKey)] = self:deepCopy(origValue)
+        end
+        setmetatable(copy, self:deepCopy(getmetatable(orig)))
+    else
+        copy = orig
+    end
+    return copy
+end
 
-KeysManager.Network = Network
-
-return KeysManager
-end)
-__bundle_register("games/Jailbreak/managers/ModuleManager", function(require, _LOADED, __bundle_register, __bundle_modules)
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Game = ReplicatedStorage.Game
-local Contract = Game.Contract
-
-return {
-    UI = require(ReplicatedStorage.Module.UI),
-    Contract = require(Contract.Contract),
-    ContractSystem = require(Contract.ContractSystem),
-    GunShopUI = require(Game.GunShop.GunShopUI),
-    PlayerUtils = require(Game.PlayerUtils)
-}
+return TableUtil
 end)
 __bundle_register("games/Jailbreak/ui/FarmingTab", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Player = require("modules/exploit/Player")
@@ -341,6 +515,20 @@ end
 
 return ContractManager
 end)
+__bundle_register("games/Jailbreak/managers/ModuleManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Game = ReplicatedStorage.Game
+local Contract = Game.Contract
+
+return {
+    UI = require(ReplicatedStorage.Module.UI),
+    Contract = require(Contract.Contract),
+    ContractSystem = require(Contract.ContractSystem),
+    GunShopUI = require(Game.GunShop.GunShopUI),
+    PlayerUtils = require(Game.PlayerUtils)
+}
+end)
 __bundle_register("modules/exploit/Player", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Players = game:GetService("Players")
 
@@ -378,7 +566,7 @@ local function visualsTab(VisualsTab)
             Validator = function(obj)
                 return obj:FindFirstChildWhichIsA("BasePart")
             end,
-            Enabled = "AirdropESP"
+            IsEnabled = "AirdropESP"
         })
         ESPGroupBox:AddToggle("AirdropESP", { Text = "Show Airdrops" }):OnChanged(function() ESP.AirdropESP = Toggles.AirdropESP.Value end)
     end
@@ -1110,12 +1298,9 @@ local RunService = game:GetService("RunService")
 
 local flyingMaid = Maid.new()
 
-local isFlying = false
-
 local localPlayer = Player:GetLocalPlayer() ---@type Player
 local character = Player:GetChar() ---@type Model
 local humanoid = character:FindFirstChild("Humanoid") or character:WaitForChild("Humanoid", 3) ---@type Humanoid
-local camera = game:GetService("Workspace").CurrentCamera
 
 local PlayerUtils = Modules.PlayerUtils
 local CircleSpecs = Modules.UI.CircleAction.Specs
@@ -1146,38 +1331,41 @@ PlayerUtils.isPointInTag = function(point, tag)
 end
 
 local function flyingOnRenderStepped()
-    local root = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+    pcall(function()
+        local root = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local camera = workspace.CurrentCamera
 
-    if root and not humanoid.PlatformStand and not humanoid.Sit then
-        local flyingVector = Vector3.new()
+        if root and not humanoid.PlatformStand and not humanoid.Sit then
+            local flyingVector = Vector3.new()
 
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            flyingVector = flyingVector + camera.CFrame.LookVector
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                flyingVector = flyingVector + camera.CFrame.LookVector
+            end
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                flyingVector = flyingVector - camera.CFrame.RightVector
+            end
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                flyingVector = flyingVector - camera.CFrame.LookVector
+            end
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                flyingVector = flyingVector + camera.CFrame.RightVector
+            end
+
+            flyingVector = flyingVector == Vector3.new() and Vector3.new(0, 9e-10, 0) or flyingVector
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) and not UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            flyingVector = flyingVector + Vector3.new(0, 1, 0)
+            elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and not UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            flyingVector = flyingVector + Vector3.new(0, -1, 0)
+            end
+
+            root.Velocity = flyingVector.Unit * (Options.FlySpeedAmount.Value) or 100
+            root.Anchored = flyingVector == Vector3.new(0, 9e-10, 0)
         end
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            flyingVector = flyingVector - camera.CFrame.RightVector
-        end
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            flyingVector = flyingVector - camera.CFrame.LookVector
-        end
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            flyingVector = flyingVector + camera.CFrame.RightVector
-        end
-
-        flyingVector = flyingVector == Vector3.new() and Vector3.new(0, 9e-10, 0) or flyingVector
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) and not UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-           flyingVector = flyingVector + Vector3.new(0, 1, 0)
-        elseif flykeys.LeftShift and not flykeys.Space then
-           flyingVector = flyingVector + Vector3.new(0, -1, 0)
-        end
-
-        root.Velocity = flyingVector.Unit * Options.FlySpeed and Options.FlySpeedAmount.Value or 100
-        root.Anchored = flyingVector == Vector3.new(0, 9e-10, 0)
-    end
+    end)
 end
 
 local function playerTab(PlayerTab, Library)
@@ -1273,9 +1461,8 @@ local function playerTab(PlayerTab, Library)
     end)
 
     Toggles.WalkSpeedToggle:OnChanged(function()
-
         pcall(function()
-            if Toggles.WalkSpeedToggle.Value and humanoid  then
+            if Toggles.WalkSpeedToggle.Value and humanoid then
                 humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
             else
                 if humanoid then
@@ -1459,6 +1646,64 @@ Maid.Destroy = Maid.DoCleaning
 
 return Maid
 end)
+__bundle_register("games/Jailbreak/managers/KeysManager", function(require, _LOADED, __bundle_register, __bundle_modules)
+local ModuleManager = require("games/Jailbreak/managers/ModuleManager")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- // Credits to Introvert1337
+local Keys, Network = loadstring(game:HttpGet("https://gist.githubusercontent.com/technorav3nn/9fe09be7c97ed916a1afdccd9150d64e/raw/74ce5f2b7985d8ecbf3ee75163de83630c6069ed/key_fetcher_fixed.lua"))()
+local KeysList = debug.getupvalue(debug.getupvalue(Network.FireServer, 1), 3)
+
+local displayList = ModuleManager.GunShopUI.displayList
+
+local KeysManager = {}
+
+-- // Credits to Introvert1337
+function KeysManager:FetchKey(fn, keyIdx)
+    local constants = debug.getconstants(fn);
+
+    for index, constant in next, constants do
+        if KeysList[constant] then -- if the constants already contain the raw key
+            return constant;
+        elseif type(constant) ~= "string" or constant == "" or #constant > 7 or constant:lower() ~= constant then
+            constants[index] = nil; -- remove constants that are 100% not the ones we need to make it a bit faster
+        end;
+    end;
+
+    local keys = {}
+
+    for key, _ in next, KeysList do
+        local prefix_passed = false;
+        local key_length = #key;
+        local keyNumber = 1
+
+        for _, constant in next, constants do
+            local constant_length = #constant;
+
+            if not prefix_passed and key:sub(1, constant_length) == constant then -- check if the key starts with one of the constants
+                prefix_passed = constant;
+            elseif prefix_passed and constant ~= prefix_passed and key:sub(key_length - (constant_length - 1), key_length) == constant then -- check if the key ends with one of the constants
+                table.insert(keys, key)
+            end;
+        end;
+    end;
+
+    return keys[keyIdx]
+end
+
+-- // I didnt loop through the keys and add them since it would be hard to tell which keys were in there
+KeysManager.Keys = {
+    GrabGun = KeysManager:FetchKey(debug.getproto(displayList, 1), 3),
+    BuyGunOrAmmo = KeysManager:FetchKey(debug.getproto(displayList, 1), 1),
+    Arrest = Keys.Arrest,
+    RedeemCode = Keys.RedeemCode
+}
+
+KeysManager.Network = Network
+
+return KeysManager
+end)
 __bundle_register("games/Jailbreak/managers/CacheManager", function(require, _LOADED, __bundle_register, __bundle_modules)
 local Players = game:GetService("Players")
 
@@ -1467,10 +1712,11 @@ local localPlayer = Players.LocalPlayer
 local CacheManager = {}
 
 CacheManager.Functions = {}
+CacheManager.Nitrous = {}
 CacheManager.Doors = debug.getupvalue(getconnections(game:GetService("CollectionService"):GetInstanceRemovedSignal("Door"))[1].Function, 1)
 
 -- // Look through gc for functions
-for _, v in pairs(getgc()) do
+for _, v in pairs(getgc(true)) do
     if type(v) == "function" and islclosure(v) then
         if getfenv(v).script == localPlayer.PlayerScripts.LocalScript then
             local name = debug.getinfo(v).name
@@ -1478,12 +1724,11 @@ for _, v in pairs(getgc()) do
 
             if name == "DoorSequence" then
                 CacheManager.Functions.OpenDoor = v
-            elseif name == "StopNitro" then
-                CacheManager.Functions.Events = debug.getupvalue(debug.getupvalue(v, 1), 2)
             elseif table.find(constants, "FailedPcall") then
                 debug.setupvalue(v, 2, true)
             end
         end
+
         if getfenv(v).script == game:GetService("ReplicatedStorage").Game.NukeControl then
             local constants = debug.getconstants(v)
             for _, v2 in pairs(constants) do
@@ -1491,6 +1736,10 @@ for _, v in pairs(getgc()) do
                     CacheManager.Functions.LaunchNuke = v
                 end
             end
+        end
+
+        if (type(v) == 'table' and rawget(v, 'Nitro')) then
+            CacheManager.Nitrous = v
         end
     end
 end
@@ -2177,20 +2426,6 @@ function LockerManager:StoreItem(item)
 end
 
 return LockerManager
-end)
-__bundle_register("modules/util/TableUtil", function(require, _LOADED, __bundle_register, __bundle_modules)
-local TableUtil = {}
-
-function TableUtil:map(tbl, fn, ...)
-    local t = {}
-    for _, element in ipairs(tbl) do
-        local _, result = pcall(fn, element, ...)
-        table.insert(t, result)
-    end
-    return t
-end
-
-return TableUtil
 end)
 __bundle_register("modules/util/Signals", function(require, _LOADED, __bundle_register, __bundle_modules)
 return loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/Signal/main/Manager.lua"))()

@@ -7,12 +7,9 @@ local RunService = game:GetService("RunService")
 
 local flyingMaid = Maid.new()
 
-local isFlying = false
-
 local localPlayer = Player:GetLocalPlayer() ---@type Player
 local character = Player:GetChar() ---@type Model
 local humanoid = character:FindFirstChild("Humanoid") or character:WaitForChild("Humanoid", 3) ---@type Humanoid
-local camera = game:GetService("Workspace").CurrentCamera
 
 local PlayerUtils = Modules.PlayerUtils
 local CircleSpecs = Modules.UI.CircleAction.Specs
@@ -43,38 +40,41 @@ PlayerUtils.isPointInTag = function(point, tag)
 end
 
 local function flyingOnRenderStepped()
-    local root = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+    pcall(function()
+        local root = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local camera = workspace.CurrentCamera
 
-    if root and not humanoid.PlatformStand and not humanoid.Sit then
-        local flyingVector = Vector3.new()
+        if root and not humanoid.PlatformStand and not humanoid.Sit then
+            local flyingVector = Vector3.new()
 
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            flyingVector = flyingVector + camera.CFrame.LookVector
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                flyingVector = flyingVector + camera.CFrame.LookVector
+            end
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                flyingVector = flyingVector - camera.CFrame.RightVector
+            end
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                flyingVector = flyingVector - camera.CFrame.LookVector
+            end
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                flyingVector = flyingVector + camera.CFrame.RightVector
+            end
+
+            flyingVector = flyingVector == Vector3.new() and Vector3.new(0, 9e-10, 0) or flyingVector
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) and not UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            flyingVector = flyingVector + Vector3.new(0, 1, 0)
+            elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and not UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            flyingVector = flyingVector + Vector3.new(0, -1, 0)
+            end
+
+            root.Velocity = flyingVector.Unit * (Options.FlySpeedAmount.Value) or 100
+            root.Anchored = flyingVector == Vector3.new(0, 9e-10, 0)
         end
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            flyingVector = flyingVector - camera.CFrame.RightVector
-        end
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            flyingVector = flyingVector - camera.CFrame.LookVector
-        end
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            flyingVector = flyingVector + camera.CFrame.RightVector
-        end
-
-        flyingVector = flyingVector == Vector3.new() and Vector3.new(0, 9e-10, 0) or flyingVector
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) and not UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-           flyingVector = flyingVector + Vector3.new(0, 1, 0)
-        elseif flykeys.LeftShift and not flykeys.Space then
-           flyingVector = flyingVector + Vector3.new(0, -1, 0)
-        end
-
-        root.Velocity = flyingVector.Unit * Options.FlySpeed and Options.FlySpeedAmount.Value or 100
-        root.Anchored = flyingVector == Vector3.new(0, 9e-10, 0)
-    end
+    end)
 end
 
 local function playerTab(PlayerTab, Library)
@@ -170,9 +170,8 @@ local function playerTab(PlayerTab, Library)
     end)
 
     Toggles.WalkSpeedToggle:OnChanged(function()
-
         pcall(function()
-            if Toggles.WalkSpeedToggle.Value and humanoid  then
+            if Toggles.WalkSpeedToggle.Value and humanoid then
                 humanoid.WalkSpeed = Options.WalkSpeedAmount.Value
             else
                 if humanoid then

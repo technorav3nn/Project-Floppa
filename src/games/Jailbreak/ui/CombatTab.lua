@@ -1,35 +1,21 @@
-local KeysManager = require("games/Jailbreak/managers/KeysManager")
+local KeysManager = getgenv().JailbreakKeysManager
+local TableUtil = require("modules/util/TableUtil")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Gun = require(ReplicatedStorage.Game.Item.Gun)
-
 local Network = KeysManager.Network
 local Keys = KeysManager.Keys
+
+local ItemConfig = ReplicatedStorage.Game.ItemConfig
 
 local allGuns = require(ReplicatedStorage.Game.GunShop.Data.Held)
 local allItems = require(ReplicatedStorage.Game.GunShop.Data.Boost)
 local allAmmo = require(ReplicatedStorage.Game.GunShop.Data.Projectile)
 
-local trollSniper = {
-    __ClassName = "Sniper",
-    LastImpactSound = 1,
-    Maid = require(ReplicatedStorage.Module.Maid),
-    LastImpact = 1,
-    Local = true,
-    Config = {},
-    IgnoreList = {},
-}
-
-Gun.SetupBulletEmitter(trollSniper)
-
-trollSniper.OnHitSurface:Connect(function()
-    print("sniper hit surface unknown if car or heli")
-end)
-
 local guns = {}
 local items = {}
 local ammoTypes = {}
+local oldGunStates = {}
 
 for _, gunTable in pairs(allGuns) do
     table.insert(guns, gunTable.Name)
@@ -42,6 +28,23 @@ end
 for _, ammoTable in pairs(allAmmo) do
     if string.find(ammoTable.Name, "Cartridge") or string.find(ammoTable.Name, "Ammo") then
         table.insert(ammoTypes, ammoTable.Name)
+    end
+end
+
+for _, v in pairs(ItemConfig:GetChildren()) do
+    local module = require(v)
+    oldGunStates[v.Name] = TableUtil:deepCopy(module)
+end
+
+local function modGun(state, prop, newValue)
+    for _, v in pairs(ItemConfig:GetChildren()) do
+        local module = require(v)
+        print(oldGunStates[v.Name][prop], "is old gun states; cur mod is ", module[prop])
+        if state then
+            module[prop] = newValue
+        else
+            module[prop] = oldGunStates[v.Name][prop]
+        end
     end
 end
 
@@ -99,6 +102,38 @@ local function combatTab(CombatTab)
         GrabItemGroupBox:AddButton("Buy Selected Item", function()
             Network:FireServer(Keys.BuyGunOrAmmo, Options.ItemSelected.Value)
         end)
+    end
+
+    local GunModGroupBox = CombatTab:AddLeftGroupbox("Gun Mods")
+    do
+        GunModGroupBox:AddToggle("InfAmmo", { Text = "Infinite Ammo" }):OnChanged(function()
+            modGun(Toggles.InfAmmo.Value, "MagSize", math.huge)
+        end)
+        GunModGroupBox:AddToggle("NoRecoil", { Text = "No Recoil" }):OnChanged(function()
+            modGun(Toggles.NoRecoil.Value, "CamShakeMagnitude", 0)
+        end)
+        
+        GunModGroupBox:AddToggle("Automatic", { Text = "Automatic Firing" }):OnChanged(function()
+            modGun(Toggles.Automatic.Value, "FireAuto", true)
+        end)
+        GunModGroupBox:AddToggle("NoReloadTime", { Text = "NoReloadTime" }):OnChanged(function()
+            modGun(Toggles.NoReloadTime.Value, "ReloadTime", 0.01)
+        end)
+        GunModGroupBox:AddToggle("FireRate", { Text = "Custom Fire Rate" })
+        AmmoGroupBox:AddSlider("FireRateAmount", {
+            Rounding = 0,
+            Text = "Fire Rate",
+            Max = 150,
+            Min = 1,
+            Default = 3,
+            Compact = true
+        }):OnChanged(function()
+            modGun(Toggles.FireRate.Value, "FireFreq", Options.FireRateAmount.Value)
+        end)
+    end
+    local ThrowableModGroupBox = CombatTab:AddRightGroupbox("Throwable Mods")
+    do
+        
     end
 end
 

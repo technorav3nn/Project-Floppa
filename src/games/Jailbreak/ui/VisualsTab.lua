@@ -17,7 +17,7 @@ local function visualsTab(VisualsTab)
             Validator = function(obj)
                 return obj:FindFirstChildWhichIsA("BasePart")
             end,
-            Enabled = "AirdropESP"
+            IsEnabled = "AirdropESP"
         })
         ESPGroupBox:AddToggle("AirdropESP", { Text = "Show Airdrops" }):OnChanged(function() ESP.AirdropESP = Toggles.AirdropESP.Value end)
     end
