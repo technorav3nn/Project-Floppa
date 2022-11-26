@@ -1,24 +1,22 @@
 {
-    "robloxLsp.diagnostics.globals": [
-        "getgenv",
-        "Options",
-        "fireproximityprompt",
-        "Toggles",
-        "firesignal",
-        "getrenv",
-        "getsenv",
-        "getconnections",
-        "hookmetamethod",
-        "getnamecallmethod",
-        "newcclosure",
-        "Drawing",
-        "islclosure",
-        "getgc",
-        "setclipboard",
-        "identifyexecutor",
-        "readfile"
-    ],
-    "robloxLsp.diagnostics.disable": [
-        "undefined-global"
-    ]
+  "robloxLsp.diagnostics.globals": [
+    "getgenv",
+    "Options",
+    "fireproximityprompt",
+    "Toggles",
+    "firesignal",
+    "getrenv",
+    "getsenv",
+    "getconnections",
+    "hookmetamethod",
+    "getnamecallmethod",
+    "newcclosure",
+    "Drawing",
+    "islclosure",
+    "getgc",
+    "setclipboard",
+    "identifyexecutor",
+    "readfile"
+  ],
+  "robloxLsp.diagnostics.disable": ["undefined-global", "trailing-space"]
 }

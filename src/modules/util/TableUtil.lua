@@ -25,4 +25,12 @@ function TableUtil:deepCopy(orig)
     return copy
 end
 
+function TableUtil:getKeys(tbl)
+    local keys = {}
+    for k, _ in pairs(tbl) do 
+        table.insert(keys, k) 
+    end
+    return keys
+end
+
 return TableUtil

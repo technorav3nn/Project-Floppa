@@ -16,4 +16,6 @@ function Util:isScriptWareM()
     end
 end
 
+function Util:validateArgs() end
+
 return Util
