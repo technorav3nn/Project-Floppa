@@ -83,15 +83,81 @@ local Constants = require("games/Islands/constants")
 
 local mobFarmMaid = require("modules/util/Maid").new()
 
+local localPlayer = game:GetService("Players").LocalPlayer
+local mobPath = game:GetService("Workspace").WildernessIsland.Entities
+
 -- // to be replaced with the FarmingTab.Flags property, dw
 local flags = {}
 
-local function getMob(mobName)
+local function getClosestMob(mobName)
     if not table.find(Constants.HostileMobKeys, mobName) then
         NotificationService:DisplayNotification({
-            message = "Couldn't find the mob ".. mobName .. ", please contact Death_Blows"
+            message = "Couldn't find the mob ".. mobName .. ", script error."
         })
     end
+
+    local root = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+    if not root then return end
+
+    local distance = 700
+    local closest = nil
+
+    for _, v in next, mobPath:GetChildren() do
+        if v.Name == mobName and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+            local newDistance = localPlayer:DistanceFromCharacter(v.HumanoidRootPart.Position)
+            if newDistance < distance then
+                closest = v
+                distance = newDistance
+            end
+        end
+    end
+
+    return closest
+end
+
+local connection = nil
+
+local function killMob(mobName)
+    local mob = getClosestMob(mobName)
+
+    if not mob then return end
+
+    IslandsUtils
+        :Teleport(localPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 10, 0))
+        :await()
+
+    connection = game:GetService("RunService").Heartbeat:Connect(function()
+        if mob:FindFirstChild("Humanoid") and mob.Humanoid.Health <= 0 then
+            if teleportPromise then
+                teleportPromise:cancel()
+            end
+            connection:Disconnect()
+            return
+        end
+    
+        if mob and mob.PrimaryPart ~= nil then
+            local teleportPromise = IslandsUtils:Teleport(mob.PrimaryPart.CFrame + Vector3.new(0, 7, 0))
+            :catch(function(err)
+                NotificationService:DisplayNotification({
+                    message = "Error: " .. err,
+                })
+            end)
+
+            NetworkService:FireEntityHit({
+                crit = true,
+                hitUnit = mob
+            })  
+        else
+            if teleportPromise then
+                NotificationService:DisplayNotification({
+                    message = "teleport promise exists"
+                })
+                teleportPromise:cancel()
+            end
+            connection:Disconnect()
+        end
+    end)
 end
 
 return function (Library, Window, FarmingTab)
@@ -99,8 +165,10 @@ return function (Library, Window, FarmingTab)
 
     flags = FarmingTab.Flags
 
-    MobFarmSection:AddToggle("Enabled", { flag = "MobFarmEnabled" })
-    MobFarmSection:AddDropdown("Mob Selected", Constants.HostileMobKeys { default = "slime" })
+    MobFarmSection:AddToggle("Enabled", { flag = "MobFarmEnabled" }, function()
+        killMob("slime")
+    end)
+    MobFarmSection:AddDropdown("Mob Selected", Constants.HostileMobKeys, { default = "slime" })
 end
 end)
 __bundle_register("modules/util/Maid", function(require, _LOADED, __bundle_register, __bundle_modules)
@@ -245,8 +313,13 @@ end)
 __bundle_register("games/Islands/constants", function(require, _LOADED, __bundle_register, __bundle_modules)
 local TableUtil = require("modules/util/TableUtil")
 
-local Constants
-Constants = {
+local HostileMobs = {
+    slime = { boss = false },
+    wizardLizard = { boss = false },
+    slimeKing = { boss = true },
+}
+
+return {
     Rocks = {
         "rockIron",
         "rockCoal",
@@ -260,15 +333,9 @@ Constants = {
         "rockSlate",
         "rockSandstone",
     },
-    HostileMobs = {
-        slime = { boss = false },
-        wizardLizard = { boss = false },
-        slimeKing = { boss = true },
-    },
-    HostileMobKeys = TableUtil:getKeys(Constants.HostileMobs)
+    HostileMobs = HostileMobs,
+    HostileMobKeys = TableUtil:getKeys(HostileMobs)
 }
-
-return Constants
 end)
 __bundle_register("modules/util/TableUtil", function(require, _LOADED, __bundle_register, __bundle_modules)
 local TableUtil = {}
@@ -434,45 +501,43 @@ function IslandsUtils:GetLocalPlayerIsland()
 end
 
 function IslandsUtils:Teleport(cframe)
-    return function()
-        return Promise.new(function(resolve, reject, onCancel)
-            local connection
-            local time =
-            (cframe.p + Vector3.new(0, 0, 3) -
-            game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude / 20
+	return Promise.new(function(resolve, reject, onCancel)
+		local connection
+		local time =
+		(cframe.p + Vector3.new(0, 0, 3) -
+		game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude / 20
 
-            local tween = game:GetService("TweenService"):Create(
-                game.Players.LocalPlayer.Character.HumanoidRootPart,
-                TweenInfo.new(time, Enum.EasingStyle.Linear),
-                { CFrame = cframe }
-            )
+		local tween = game:GetService("TweenService"):Create(
+			game.Players.LocalPlayer.Character.HumanoidRootPart,
+			TweenInfo.new(time, Enum.EasingStyle.Linear),
+			{ CFrame = cframe }
+		)
 
-            if onCancel(function() tween:Cancel() end) then
-                return
-            end
+		if onCancel(function() tween:Cancel() end) then
+			return
+		end
 
-            startFlying()
-            task.wait(0.1)
+		startFlying()
+		task.wait(0.1)
 
-            connection = game:GetService("RunService").Stepped:Connect(function ()
-                for _, v in pairs(game:GetService("Players").LocalPlayer.Character:GetChildren()) do
-                    if v:IsA("BasePart") then
-                        v.CanCollide = false
-                    end
-                end
-            end)
+		connection = game:GetService("RunService").Stepped:Connect(function ()
+			for _, v in pairs(game:GetService("Players").LocalPlayer.Character:GetChildren()) do
+				if v:IsA("BasePart") then
+					v.CanCollide = false
+				end
+			end
+		end)
 
-            tween.Completed:Connect(function(...)
-                connection:Disconnect()
-                stopFlying()
+		tween.Completed:Connect(function(...)
+			connection:Disconnect()
+			stopFlying()
 
-                resolve(...)
-            end)
+			resolve(...)
+		end)
 
-            tween:Play()
-            tween.Completed:Wait()
-        end)
-    end
+		tween:Play()
+		tween.Completed:Wait()
+	end)
 end
 
 return IslandsUtils
@@ -2564,8 +2629,8 @@ function NotificationService:DisplayNotification(options)
     local resolvedOptions = {
         largeIcon = options.largeIcon or "rbxthumb://type=AvatarHeadShot&id=" .. Players.LocalPlayer.UserId .. "&w=150&h=150",
         gameId = options.gameId or "bedwars",
-        title = title or string.upper("Project Floppa"),
-        message = message or "Unknown Message"
+        title = options.title or string.upper("Project Floppa"),
+        message = options.message or "Unknown Message"
     }
     
     IslandsNotificationController:displayNotification(resolvedOptions);
@@ -2575,9 +2640,43 @@ return NotificationService
 end)
 __bundle_register("games/Islands/services/NetworkService", function(require, _LOADED, __bundle_register, __bundle_modules)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+
 local remotesPath = ReplicatedStorage.rbxts_include.node_modules.net.out._NetManaged
 
+local uuid = HttpService:GenerateGUID(false)
+
 local NetworkService = {}
+
+NetworkService.UnfinishedRemoteNames = {}
+NetworkService.Remotes = {}
+
+-- // its so easy its insane
+
+-- // get the remote names
+for _, v in pairs(getgc()) do
+    if type(v) == "function" and islclosure(v) then
+        if getfenv(v).script.Name == "sword" then
+            local info = debug.getinfo(v)
+            if info.name == "attemptHit" then
+                local promiseDeferOne = debug.getproto(v, 1)
+                local promiseDeferTwo = debug.getproto(promiseDeferOne, 1)
+                
+                NetworkService.UnfinishedRemoteNames.EntityHit = debug.getconstants(promiseDeferTwo)[1]
+            end
+        end
+    end
+    -- EDoykrNuwmlnz
+end
+
+-- // find the remotes in _NetManaged
+for _, v in ipairs(remotesPath:GetChildren()) do
+    if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+        if string.find(v.Name, NetworkService.UnfinishedRemoteNames.EntityHit) then
+            NetworkService.Remotes.EntityHit = v
+        end
+    end
+end
 
 function NetworkService:FireBlockBreak(args)
     --[[
@@ -2591,6 +2690,29 @@ function NetworkService:FireBlockBreak(args)
         }
     ]]
     return remotesPath.CLIENT_BLOCK_HIT_REQUEST:InvokeServer(args)
+end
+
+function NetworkService:FireEntityHit(args)
+    --[[
+        arguments example:
+        local ohString1 = "5f770d78-6db7-4424-bc68-8b3df68cc6a9"
+        local ohTable2 = {
+            [1] = {
+                ["crit"] = true,
+                ["hitUnit"] = .slime (put the slime path here lol)
+            }
+        }
+
+        in the remote:
+        NetworkService:FireEntityHit({
+            crit = true,
+            hitUnit = game.Workspace.SlimePath.IForgot.Lmao
+        })
+    ]]
+
+    NetworkService.Remotes.EntityHit:FireServer(uuid, {
+        [1] = args
+    })
 end
 
 return NetworkService
@@ -2649,8 +2771,10 @@ local function farmRock(rockName, useHub)
 
     currentlyMining = true
 
-    local teleportPromise = IslandsUtils:Teleport(rock.CFrame)()
+    local teleportPromise = IslandsUtils:Teleport(rock.CFrame)
         :andThen(function()
+            return
+            --[[
             if not faster then
                 repeat
                     if tick() - elapsed >= 3 then
@@ -2678,38 +2802,38 @@ local function farmRock(rockName, useHub)
                 currentlyMining = false
                 return
             end
+            ]]
         end)
         :catch(function(err)
             warn("Error when teleporting to ore: ", err)
         end)
 
-    if faster then
-        -- // used to combat the anti cheat tp-ing us back
-        repeat
-            if tick() - elapsed >= 3 then
-                teleportPromise:cancel()
-                currentlyMining = false
-                elapsed = tick()
-                return
-            end
+    -- // used to combat the anti cheat tp-ing us back
+    repeat
+        if tick() - elapsed >= 6 then
+            teleportPromise:cancel()
+            currentlyMining = false
+            elapsed = tick()
+            return
+        end
+
+        task.wait()
+        NetworkService:FireBlockBreak({
+            ["player_tracking_category"] = "join_from_web",
+            ["part"] = rock:FindFirstChild("1"),
+            ["block"] = rock,
+            ["norm"] = Vector3.new(-3498.322265625, 37.062782287598, -3482.3693847656),
+            ["pos"] = rock.Position
+        })
+
+        if not rock then
+            teleportPromise:cancel()
+        end
+
+    until not rock
+
+    currentlyMining = false
     
-            task.wait()
-            NetworkService:FireBlockBreak({
-                ["player_tracking_category"] = "join_from_web",
-                ["part"] = rock:FindFirstChild("1"),
-                ["block"] = rock,
-                ["norm"] = Vector3.new(-3498.322265625, 37.062782287598, -3482.3693847656),
-                ["pos"] = rock.Position
-            })
-
-            if not rock then
-               teleportPromise:cancel()
-            end
-
-        until not rock
-
-        currentlyMining = false
-    end
 end
 
 return function (Library, Window, FarmingTab)

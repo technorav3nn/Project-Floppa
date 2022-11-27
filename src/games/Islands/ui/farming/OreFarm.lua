@@ -51,8 +51,10 @@ local function farmRock(rockName, useHub)
 
     currentlyMining = true
 
-    local teleportPromise = IslandsUtils:Teleport(rock.CFrame)()
+    local teleportPromise = IslandsUtils:Teleport(rock.CFrame)
         :andThen(function()
+            return
+            --[[
             if not faster then
                 repeat
                     if tick() - elapsed >= 3 then
@@ -80,38 +82,38 @@ local function farmRock(rockName, useHub)
                 currentlyMining = false
                 return
             end
+            ]]
         end)
         :catch(function(err)
             warn("Error when teleporting to ore: ", err)
         end)
 
-    if faster then
-        -- // used to combat the anti cheat tp-ing us back
-        repeat
-            if tick() - elapsed >= 3 then
-                teleportPromise:cancel()
-                currentlyMining = false
-                elapsed = tick()
-                return
-            end
+    -- // used to combat the anti cheat tp-ing us back
+    repeat
+        if tick() - elapsed >= 6 then
+            teleportPromise:cancel()
+            currentlyMining = false
+            elapsed = tick()
+            return
+        end
+
+        task.wait()
+        NetworkService:FireBlockBreak({
+            ["player_tracking_category"] = "join_from_web",
+            ["part"] = rock:FindFirstChild("1"),
+            ["block"] = rock,
+            ["norm"] = Vector3.new(-3498.322265625, 37.062782287598, -3482.3693847656),
+            ["pos"] = rock.Position
+        })
+
+        if not rock then
+            teleportPromise:cancel()
+        end
+
+    until not rock
+
+    currentlyMining = false
     
-            task.wait()
-            NetworkService:FireBlockBreak({
-                ["player_tracking_category"] = "join_from_web",
-                ["part"] = rock:FindFirstChild("1"),
-                ["block"] = rock,
-                ["norm"] = Vector3.new(-3498.322265625, 37.062782287598, -3482.3693847656),
-                ["pos"] = rock.Position
-            })
-
-            if not rock then
-               teleportPromise:cancel()
-            end
-
-        until not rock
-
-        currentlyMining = false
-    end
 end
 
 return function (Library, Window, FarmingTab)

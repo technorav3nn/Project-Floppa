@@ -14,8 +14,8 @@ function NotificationService:DisplayNotification(options)
     local resolvedOptions = {
         largeIcon = options.largeIcon or "rbxthumb://type=AvatarHeadShot&id=" .. Players.LocalPlayer.UserId .. "&w=150&h=150",
         gameId = options.gameId or "bedwars",
-        title = title or string.upper("Project Floppa"),
-        message = message or "Unknown Message"
+        title = options.title or string.upper("Project Floppa"),
+        message = options.message or "Unknown Message"
     }
     
     IslandsNotificationController:displayNotification(resolvedOptions);

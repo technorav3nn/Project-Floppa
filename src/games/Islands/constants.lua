@@ -1,7 +1,12 @@
 local TableUtil = require("modules/util/TableUtil")
 
-local Constants
-Constants = {
+local HostileMobs = {
+    slime = { boss = false },
+    wizardLizard = { boss = false },
+    slimeKing = { boss = true },
+}
+
+return {
     Rocks = {
         "rockIron",
         "rockCoal",
@@ -15,12 +20,6 @@ Constants = {
         "rockSlate",
         "rockSandstone",
     },
-    HostileMobs = {
-        slime = { boss = false },
-        wizardLizard = { boss = false },
-        slimeKing = { boss = true },
-    },
-    HostileMobKeys = TableUtil:getKeys(Constants.HostileMobs)
+    HostileMobs = HostileMobs,
+    HostileMobKeys = TableUtil:getKeys(HostileMobs)
 }
-
-return Constants

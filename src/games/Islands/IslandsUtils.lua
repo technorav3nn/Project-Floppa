@@ -123,45 +123,43 @@ function IslandsUtils:GetLocalPlayerIsland()
 end
 
 function IslandsUtils:Teleport(cframe)
-    return function()
-        return Promise.new(function(resolve, reject, onCancel)
-            local connection
-            local time =
-            (cframe.p + Vector3.new(0, 0, 3) -
-            game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude / 20
+	return Promise.new(function(resolve, reject, onCancel)
+		local connection
+		local time =
+		(cframe.p + Vector3.new(0, 0, 3) -
+		game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude / 20
 
-            local tween = game:GetService("TweenService"):Create(
-                game.Players.LocalPlayer.Character.HumanoidRootPart,
-                TweenInfo.new(time, Enum.EasingStyle.Linear),
-                { CFrame = cframe }
-            )
+		local tween = game:GetService("TweenService"):Create(
+			game.Players.LocalPlayer.Character.HumanoidRootPart,
+			TweenInfo.new(time, Enum.EasingStyle.Linear),
+			{ CFrame = cframe }
+		)
 
-            if onCancel(function() tween:Cancel() end) then
-                return
-            end
+		if onCancel(function() tween:Cancel() end) then
+			return
+		end
 
-            startFlying()
-            task.wait(0.1)
+		startFlying()
+		task.wait(0.1)
 
-            connection = game:GetService("RunService").Stepped:Connect(function ()
-                for _, v in pairs(game:GetService("Players").LocalPlayer.Character:GetChildren()) do
-                    if v:IsA("BasePart") then
-                        v.CanCollide = false
-                    end
-                end
-            end)
+		connection = game:GetService("RunService").Stepped:Connect(function ()
+			for _, v in pairs(game:GetService("Players").LocalPlayer.Character:GetChildren()) do
+				if v:IsA("BasePart") then
+					v.CanCollide = false
+				end
+			end
+		end)
 
-            tween.Completed:Connect(function(...)
-                connection:Disconnect()
-                stopFlying()
+		tween.Completed:Connect(function(...)
+			connection:Disconnect()
+			stopFlying()
 
-                resolve(...)
-            end)
+			resolve(...)
+		end)
 
-            tween:Play()
-            tween.Completed:Wait()
-        end)
-    end
+		tween:Play()
+		tween.Completed:Wait()
+	end)
 end
 
 return IslandsUtils
