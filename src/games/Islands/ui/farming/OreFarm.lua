@@ -117,7 +117,7 @@ local function farmRock(rockName, useHub)
 end
 
 return function (Library, Window, FarmingTab)
-    local OreFarmSection = FarmingTab:AddSection("Ore Farm", { default = false })
+    local OreFarmSection = FarmingTab:AddSection("Ore Farm", { default = false, position = "left" })
 
     OreFarmSection:AddToggle("Enabled", { flag = "OreFarmEnabled"}, function(state)
         if state then

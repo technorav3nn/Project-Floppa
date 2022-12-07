@@ -10,4 +10,6 @@ elseif game.PlaceId == 606849621 then
     require("games/Jailbreak/main")
 elseif game.PlaceId == 4872321990 then
     require("games/Islands/main")
+elseif game.PlaceId == 2788229376 then
+    require("games/DaHood/main")
 end

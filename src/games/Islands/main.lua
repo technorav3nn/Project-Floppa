@@ -1,4 +1,4 @@
-local LibModule = require("modules/exploit/ui/Vynixius")
+local LibModule = require("modules/exploit/ui/VynixiusV2")
 
 local Library, Window = LibModule.createVynixiusLib("Project Floppa", "Islands")
 

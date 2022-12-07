@@ -85,7 +85,7 @@ local function killMob(mobName)
 end
 
 return function (Library, Window, FarmingTab)
-    local MobFarmSection = FarmingTab:AddSection("Mob Farm", { default = false })
+    local MobFarmSection = FarmingTab:AddSection("Mob Farm", { default = false, position = "right" })
 
     flags = FarmingTab.Flags
 
